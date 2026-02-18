@@ -3,18 +3,66 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stanbic Receipt Form</title>
+<title>Stanbic Transaction</title>
+
 <style>
-body{font-family:"Segoe UI",Arial;background:#f2f2f2;margin:0;padding:15px;}
-.wrapper{max-width:420px;margin:auto;padding:15px;background:#fff;border-radius:10px;}
-h2{text-align:center;}
-input{width:100%;padding:10px;margin:6px 0;font-size:14px;}
-button{width:100%;padding:12px;margin-top:10px;background:#1c2c8c;color:#fff;border:none;font-size:15px;}
+body{
+  font-family:"Segoe UI",Arial,sans-serif;
+  background:#f2f2f2;
+  margin:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+
+.wrapper{
+  max-width:420px;
+  width:90%;
+  background:white;
+  padding:20px;
+  border-radius:12px;
+  box-sizing:border-box;
+}
+
+h2{cursor:pointer;text-align:center;}
+
+input{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin-top:15px;
+  border:none;
+  background:#1c2c8c;
+  color:white;
+  font-size:15px;
+  border-radius:8px;
+}
+
+.adminPanel{
+  display:none;
+  margin-top:15px;
+  padding:12px;
+  background:#eef1ff;
+  border-radius:8px;
+  text-align:center;
+}
 </style>
 </head>
+
 <body>
+
 <div class="wrapper">
-<h2>Stanbic IBTC Transaction</h2>
+
+<h2 onclick="tapAdmin()">Stanbic IBTC Transaction</h2>
+
 <input id="amount" placeholder="Amount">
 <input id="beneficiary" placeholder="Beneficiary Name">
 <input id="beneficiaryAcc" placeholder="Beneficiary Account">
@@ -23,21 +71,91 @@ button{width:100%;padding:12px;margin-top:10px;background:#1c2c8c;color:#fff;bor
 <input id="senderAcc" placeholder="Sender Account">
 <input id="senderBank" placeholder="Sender Bank">
 <input id="narration" placeholder="Narration">
-<button onclick="generateReceipt()">Generate Receipt</button>
+
+<button onclick="showCodeModal()">Generate Receipt</button>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel" class="adminPanel">
+<button onclick="generateCode()">Generate Access Code</button>
+<div id="codeDisplay" style="margin-top:10px;font-weight:bold;"></div>
+</div>
+
+</div>
+
+<!-- CODE INPUT MODAL -->
+<div id="codeModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;">
+<div style="background:white;padding:20px;width:90%;max-width:300px;border-radius:10px;text-align:center;">
+<h3>Enter Access Code</h3>
+<input id="userCode" placeholder="Enter code">
+<button onclick="verifyCode()">Submit</button>
+</div>
 </div>
 
 <script>
-function generateReceipt(){
-  localStorage.setItem("amount", document.getElementById("amount").value);
-  localStorage.setItem("beneficiary", document.getElementById("beneficiary").value);
-  localStorage.setItem("beneficiaryAcc", document.getElementById("beneficiaryAcc").value);
-  localStorage.setItem("beneficiaryBank", document.getElementById("beneficiaryBank").value);
-  localStorage.setItem("sender", document.getElementById("sender").value);
-  localStorage.setItem("senderAcc", document.getElementById("senderAcc").value);
-  localStorage.setItem("senderBank", document.getElementById("senderBank").value);
-  localStorage.setItem("narration", document.getElementById("narration").value);
+let tapCount=0;
+const ADMIN_PASSWORD="admin123"; // Change this
+
+let codes=JSON.parse(localStorage.getItem("codes")||"[]");
+
+function tapAdmin(){
+  tapCount++;
+  if(tapCount>=5){
+    let pass=prompt("Enter Admin Password");
+    if(pass===ADMIN_PASSWORD){
+      document.getElementById("adminPanel").style.display="block";
+    } else alert("Wrong password");
+    tapCount=0;
+  }
+}
+
+// Generate code valid for 1 month
+function generateCode(){
+  const newCode="PRO-"+Math.random().toString(36).substr(2,8).toUpperCase();
+  const expiry=new Date();
+  expiry.setMonth(expiry.getMonth()+1);
+
+  codes.push({code:newCode,expires:expiry.getTime(),used:false});
+  localStorage.setItem("codes",JSON.stringify(codes));
+
+  document.getElementById("codeDisplay").innerText="NEW CODE: "+newCode;
+}
+
+// Show code modal
+function showCodeModal(){
+  document.getElementById("codeModal").style.display="flex";
+}
+
+// Verify user code
+function verifyCode(){
+  const input=document.getElementById("userCode").value.trim();
+  const now=new Date().getTime();
+
+  let index=codes.findIndex(c=>c.code===input);
+  if(index===-1){ alert("Invalid code"); return; }
+
+  let c=codes[index];
+
+  if(c.used){ alert("Code already used"); return; }
+
+  if(now>c.expires){ alert("Code expired"); return; }
+
+  // Mark as used
+  codes[index].used=true;
+  localStorage.setItem("codes",JSON.stringify(codes));
+
+  // Save form data
+  localStorage.setItem("amount",document.getElementById("amount").value);
+  localStorage.setItem("beneficiary",document.getElementById("beneficiary").value);
+  localStorage.setItem("beneficiaryAcc",document.getElementById("beneficiaryAcc").value);
+  localStorage.setItem("beneficiaryBank",document.getElementById("beneficiaryBank").value);
+  localStorage.setItem("sender",document.getElementById("sender").value);
+  localStorage.setItem("senderAcc",document.getElementById("senderAcc").value);
+  localStorage.setItem("senderBank",document.getElementById("senderBank").value);
+  localStorage.setItem("narration",document.getElementById("narration").value);
+
   window.location.href="receipt.html";
 }
 </script>
+
 </body>
 </html>
