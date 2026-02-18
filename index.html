@@ -25,7 +25,7 @@ body{
   box-sizing:border-box;
 }
 
-h2{cursor:pointer;text-align:center;}
+h2{cursor:pointer;text-align:center;margin-bottom:15px;}
 
 input{
   width:100%;
@@ -54,6 +54,32 @@ button{
   border-radius:8px;
   text-align:center;
 }
+
+#codeDisplay{
+  margin-top:10px;
+  font-weight:bold;
+  word-break:break-word;
+}
+
+/* Modal overlay */
+#codeModal{
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+}
+#codeModal .modalContent{
+  background:white;
+  padding:20px;
+  width:90%;
+  max-width:300px;
+  border-radius:10px;
+  text-align:center;
+}
 </style>
 </head>
 
@@ -63,6 +89,7 @@ button{
 
 <h2 onclick="tapAdmin()">Stanbic IBTC Transaction</h2>
 
+<!-- Form -->
 <input id="amount" placeholder="Amount">
 <input id="beneficiary" placeholder="Beneficiary Name">
 <input id="beneficiaryAcc" placeholder="Beneficiary Account">
@@ -74,21 +101,21 @@ button{
 
 <button onclick="showCodeModal()">Generate Receipt</button>
 
-<!-- ADMIN PANEL -->
+<!-- Admin Panel (hidden by default) -->
 <div id="adminPanel" class="adminPanel">
 <button onclick="generateCode()">Generate Access Code</button>
-<div id="codeDisplay" style="margin-top:10px;font-weight:bold;"></div>
+<div id="codeDisplay"></div>
 </div>
 
-</div>
+</div> <!-- END wrapper -->
 
-<!-- CODE INPUT MODAL -->
-<div id="codeModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;">
-<div style="background:white;padding:20px;width:90%;max-width:300px;border-radius:10px;text-align:center;">
-<h3>Enter Access Code</h3>
-<input id="userCode" placeholder="Enter code">
-<button onclick="verifyCode()">Submit</button>
-</div>
+<!-- CODE INPUT MODAL (keep at bottom of body) -->
+<div id="codeModal">
+  <div class="modalContent">
+    <h3>Enter Access Code</h3>
+    <input id="userCode" placeholder="Enter code">
+    <button onclick="verifyCode()">Submit</button>
+  </div>
 </div>
 
 <script>
@@ -97,6 +124,7 @@ const ADMIN_PASSWORD="admin123"; // Change this
 
 let codes=JSON.parse(localStorage.getItem("codes")||"[]");
 
+// Tap admin method
 function tapAdmin(){
   tapCount++;
   if(tapCount>=5){
@@ -108,7 +136,15 @@ function tapAdmin(){
   }
 }
 
-// Generate code valid for 1 month
+// Hash (#admin) method
+if(window.location.hash === "#admin"){
+  let pass=prompt("Enter Admin Password");
+  if(pass===ADMIN_PASSWORD){
+    document.getElementById("adminPanel").style.display="block";
+  }
+}
+
+// Generate code (1 month expiry)
 function generateCode(){
   const newCode="PRO-"+Math.random().toString(36).substr(2,8).toUpperCase();
   const expiry=new Date();
@@ -125,7 +161,7 @@ function showCodeModal(){
   document.getElementById("codeModal").style.display="flex";
 }
 
-// Verify user code
+// Verify code
 function verifyCode(){
   const input=document.getElementById("userCode").value.trim();
   const now=new Date().getTime();
@@ -153,6 +189,7 @@ function verifyCode(){
   localStorage.setItem("senderBank",document.getElementById("senderBank").value);
   localStorage.setItem("narration",document.getElementById("narration").value);
 
+  localStorage.setItem("accessGranted",true);
   window.location.href="receipt.html";
 }
 </script>
