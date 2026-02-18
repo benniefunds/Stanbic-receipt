@@ -1,0 +1,88 @@
+body{
+  margin:0;
+  background:#f1f3f6;
+  font-family: Arial, sans-serif;
+}
+
+.wrapper{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:20px;
+}
+
+.receipt{
+  width:340px;
+  background:#fff;
+  padding:18px;
+  border-radius:12px;
+}
+
+.logo{
+  width:150px;
+  display:block;
+  margin:auto;
+}
+
+.status{
+  text-align:center;
+  margin-top:10px;
+}
+
+.check{
+  width:26px;
+  height:26px;
+  background:#1aa34a;
+  color:#fff;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
+  margin:auto;
+}
+
+.success-text{
+  font-size:13px;
+  font-weight:bold;
+  margin-top:5px;
+}
+
+.amount{
+  text-align:center;
+  font-size:22px;
+  font-weight:bold;
+  margin:12px 0;
+}
+
+.section{
+  border-top:1px solid #eee;
+  border-bottom:1px solid #eee;
+  padding:10px 0;
+}
+
+.row{
+  display:flex;
+  justify-content:space-between;
+  font-size:12px;
+  margin:6px 0;
+}
+
+.notice{
+  font-size:10px;
+  text-align:center;
+  color:#555;
+  margin-top:12px;
+  line-height:1.4;
+}
+
+.download-btn{
+  margin-top:15px;
+  width:340px;
+  padding:12px;
+  background:#0033a1;
+  color:white;
+  border:none;
+  border-radius:8px;
+  font-size:14px;
+}
