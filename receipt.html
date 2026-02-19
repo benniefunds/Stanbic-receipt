@@ -19,14 +19,14 @@ button:hover{opacity:0.9;}
 <div class="wrapper" id="receiptWrapper">
 <h2>Stanbic IBTC Bank</h2>
 <div id="receiptContent"></div>
-<button onclick="downloadPDF()">Download as PDF</button>
+<button id="downloadBtn">Download as PDF</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 const receiptData = JSON.parse(sessionStorage.getItem("receiptData")||"{}");
 const container = document.getElementById("receiptContent");
-if(!receiptData.sender){container.innerHTML="<p style='color:red;text-align:center;'>No receipt data found.</p>";} 
+if(!receiptData.sender){ container.innerHTML="<p style='color:red;text-align:center;'>No receipt data found.</p>"; } 
 else{
   container.innerHTML=`
   <div class="info"><b>Sender Name:</b>${receiptData.sender}</div>
@@ -41,10 +41,10 @@ else{
   <div class="info"><b>Reference:</b>${receiptData.ref}</div>`;
 }
 
-async function downloadPDF(){
+document.getElementById("downloadBtn").addEventListener("click", ()=>{
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  let y = 10;
+  let y=10;
   doc.setFontSize(16); doc.setTextColor(28,44,140);
   doc.text("Stanbic IBTC Bank Receipt",105,y,{align:"center"}); y+=10;
   doc.setFontSize(12); doc.setTextColor(0,0,0);
@@ -53,7 +53,7 @@ async function downloadPDF(){
     y+=8;
   }
   doc.save(`Receipt-${receiptData.ref}.pdf`);
-}
+});
 </script>
 </body>
 </html>
