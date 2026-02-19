@@ -3,234 +3,147 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stanbic Admin PRO MAX - Live</title>
-
+<title>Stanbic Receipt Generator</title>
 <style>
 body{
-  font-family:'Segoe UI', Arial, sans-serif;
-  background:#f0f2f5;
+  font-family:"Segoe UI", Arial;
+  background:#f2f2f2;
   margin:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
 }
-.container{
-  max-width:900px;
-  margin:auto;
-  padding:20px;
-}
-.card{
+.wrapper{
+  max-width:420px;
+  width:90%;
   background:white;
   padding:20px;
   border-radius:12px;
-  margin-bottom:15px;
-  box-shadow:0 4px 12px rgba(0,0,0,0.08);
+  box-sizing:border-box;
 }
-h3{margin:0 0 10px 0;font-size:20px;}
-input, select, button{
+h2{text-align:center;margin-bottom:15px;font-size:18px;}
+input,button{
   width:100%;
   padding:12px;
   margin-top:8px;
-  border-radius:8px;
+  border-radius:6px;
   border:1px solid #ccc;
   font-size:14px;
   box-sizing:border-box;
 }
-button{cursor:pointer;font-weight:600;transition:0.2s}
-button:hover{opacity:0.9}
-.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
-#dashboard{display:none;}
-#stats{font-size:14px;margin-bottom:10px;font-weight:600;}
-.codeCard{
-  background:#fdfdfd;
-  padding:12px;
-  border-radius:10px;
-  margin-top:10px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.06);
-  font-size:13px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  flex-wrap:wrap;
+button{
+  background:#1c2c8c;
+  color:white;
+  border:none;
+  cursor:pointer;
 }
-.codeInfo{flex:1 1 60%;}
-.codeButtons{flex:1 1 35%;display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;}
-.generateBtn{background:linear-gradient(90deg,#1c2c8c,#3a49c5);color:white;border:none;}
-.deleteBtn{background:#ff4d4d;color:white;border:none;}
-.revokeBtn{background:#ff9800;color:white;border:none;}
-.copyBtn{background:#4caf50;color:white;border:none;}
-input:focus, select:focus{outline:none;border-color:#3a49c5;box-shadow:0 0 5px rgba(58,73,197,0.3);}
+#codeModal{
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+}
+.modalContent{
+  background:white;
+  padding:20px;
+  width:90%;
+  max-width:300px;
+  border-radius:10px;
+  text-align:center;
+}
 </style>
 </head>
-
 <body>
 
-<div class="container">
+<div class="wrapper">
 
-<!-- LOGIN -->
-<div class="card" id="loginBox">
-<h3>Admin Login</h3>
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
-</div>
+<h2>Stanbic IBTC Transaction</h2>
 
-<!-- DASHBOARD -->
-<div id="dashboard">
-
-<div class="card topbar">
-<h3>Admin Dashboard</h3>
-<button onclick="logout()" style="background:#ff4d4d;color:white;border:none;padding:10px 20px;border-radius:8px">Logout</button>
-</div>
-
-<div class="card">
-<button class="generateBtn" onclick="generateCode()">Generate New Code</button>
-</div>
-
-<div class="card">
-<input id="search" placeholder="Search code..." oninput="loadCodes()">
-<select id="filter" onchange="loadCodes()">
-<option value="all">All</option>
-<option value="active">Active</option>
-<option value="used">Used</option>
-<option value="expired">Expired</option>
-</select>
-
-<div id="stats"></div>
-<div id="codes"></div>
-</div>
+<input id="sender" placeholder="Sender Name">
+<input id="senderAcc" placeholder="Sender Account">
+<input id="beneficiary" placeholder="Beneficiary Name">
+<input id="beneficiaryAcc" placeholder="Beneficiary Account">
+<input id="beneficiaryBank" placeholder="Beneficiary Bank">
+<input id="amount" placeholder="Amount">
+<input id="narration" placeholder="Narration">
+<button onclick="showCodeModal()">Generate Receipt</button>
 
 </div>
+
+<!-- CODE INPUT MODAL -->
+<div id="codeModal">
+  <div class="modalContent">
+    <h3>Enter Access Code</h3>
+    <input id="userCode">
+    <button onclick="verifyCode()">Submit</button>
+  </div>
 </div>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-getFirestore, collection, addDoc, getDocs,
-updateDoc, deleteDoc, doc, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import {
-getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-// ===== Firebase config =====
+// Firebase config
 const firebaseConfig = {
-apiKey: "AIzaSyBCXfc6oFNUkx1qLWZt5ZqpY2yYzn0OTio",
-authDomain: "stanbic-pro.firebaseapp.com",
-projectId: "stanbic-pro",
-storageBucket: "stanbic-pro.firebasestorage.app",
-messagingSenderId: "430146762267",
-appId: "1:430146762267:web:7653262e8cba7c1cc02abe"
+  apiKey: "AIzaSyBCXfc6oFNUkx1qLWZt5ZqpY2yYzn0OTio",
+  authDomain: "stanbic-pro.firebaseapp.com",
+  projectId: "stanbic-pro",
+  storageBucket: "stanbic-pro.firebasestorage.app",
+  messagingSenderId: "430146762267",
+  appId: "1:430146762267:web:7653262e8cba7c1cc02abe"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app);
 
-// ===== Auth state check =====
-onAuthStateChanged(auth,user=>{
-if(user){
-loginBox.style.display="none";
-dashboard.style.display="block";
-loadCodes();
-startAutoRefresh();
-}else{
-loginBox.style.display="block";
-dashboard.style.display="none";
-stopAutoRefresh();
+// Show modal
+function showCodeModal(){
+  document.getElementById("codeModal").style.display="flex";
 }
-});
 
-// ===== Login / Logout =====
-window.login=()=>signInWithEmailAndPassword(auth,email.value,password.value)
-  .catch(e=>alert("Login failed: "+e.message));
-window.logout=()=>signOut(auth);
-
-// ===== Generate Code =====
-window.generateCode=async()=>{
+// Verify code and generate receipt
+async function verifyCode(){
+  const input = document.getElementById("userCode").value.trim();
+  if(!input){ alert("Enter access code"); return; }
   try{
-    const newCode="PRO-"+Math.random().toString(36).substr(2,8).toUpperCase();
-    await addDoc(collection(db,"accessCodes"),{
-      code:newCode,
-      used:false,
-      device:"",
-      expires:Date.now()+30*24*60*60*1000,
-      created:serverTimestamp()
-    });
-    loadCodes();
-  } catch(e){
-    console.error("Error generating code:",e);
-    alert("Error generating code: "+e.message);
-  }
-};
+    const q = query(collection(db,"accessCodes"), where("code","==",input));
+    const snap = await getDocs(q);
+    if(snap.empty){ alert("Invalid code"); return; }
 
-// ===== Load Codes =====
-async function loadCodes(){
-  const snap = await getDocs(collection(db,"accessCodes"));
-  let searchVal = search.value.toLowerCase();
-  let filterVal = filter.value;
-  let total=0,active=0,used=0,expired=0;
-  let html="";
+    let docData, docId;
+    snap.forEach(d=>{ docData=d.data(); docId=d.id; });
 
-  snap.forEach(docu=>{
-    const d = docu.data();
-    const id = docu.id;
     const now = Date.now();
-    let status="active";
-    if(now>d.expires){status="expired";expired++;}
-    else if(d.used){status="used";used++;}
-    else{active++;}
-    total++;
-    if(filterVal!=="all" && filterVal!==status) return;
-    if(!d.code.toLowerCase().includes(searchVal)) return;
+    if(docData.used){ alert("Code already used"); return; }
+    if(now > docData.expires){ alert("Code expired"); return; }
 
-    html+=`
-    <div class="codeCard">
-      <div class="codeInfo">
-        <b>${d.code}</b><br>
-        Status: ${status}<br>
-        Expires: ${new Date(d.expires).toLocaleDateString()}<br>
-        ${d.device?`Device: ${d.device}<br>`:""}
-      </div>
-      <div class="codeButtons">
-        <button class="copyBtn" onclick="copyCode('${d.code}')">Copy</button>
-        <button class="revokeBtn" onclick="revoke('${id}')">Revoke</button>
-        <button class="deleteBtn" onclick="del('${id}')">Delete</button>
-      </div>
-    </div>
-    `;
-  });
+    // Mark code as used
+    await updateDoc(doc(db,"accessCodes",docId),{used:true});
 
-  stats.innerHTML=`Total: ${total} | Active: ${active} | Used: ${used} | Expired: ${expired}`;
-  codes.innerHTML=html;
+    // Save receipt data
+    const receiptData = {
+      sender: sender.value,
+      senderAcc: senderAcc.value,
+      senderBank: "STANBIC IBTC BANK",
+      beneficiary: beneficiary.value,
+      beneficiaryAcc: beneficiaryAcc.value,
+      beneficiaryBank: beneficiaryBank.value,
+      amount: amount.value,
+      narration: narration.value,
+      date: new Date().toLocaleString(),
+      ref: Math.floor(Math.random()*1000000000000)
+    };
+    sessionStorage.setItem("receiptData",JSON.stringify(receiptData));
+    location.href = "receipt.html";
+
+  }catch(e){ alert("Error: "+e.message); console.error(e); }
 }
-
-// ===== Actions =====
-window.copyCode = code => navigator.clipboard.writeText(code);
-window.revoke = async id=>{
-  await updateDoc(doc(db,"accessCodes",id),{used:false,device:""});
-  loadCodes();
-};
-window.del = async id=>{
-  if(confirm("Delete code?")){
-    await deleteDoc(doc(db,"accessCodes",id));
-    loadCodes();
-  }
-};
-
-// ===== Real-time Auto Refresh =====
-let refreshInterval;
-
-function startAutoRefresh(){
-  if(!refreshInterval){
-    refreshInterval = setInterval(loadCodes,5000); // every 5 seconds
-  }
-}
-
-function stopAutoRefresh(){
-  clearInterval(refreshInterval);
-  refreshInterval = null;
-}
-
 </script>
+
 </body>
 </html>
