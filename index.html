@@ -3,144 +3,243 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stanbic Receipt Form</title>
+<title>Stanbic Receipt Generator</title>
 
 <style>
 body{
   font-family:"Segoe UI", Arial;
   background:#f2f2f2;
+  margin:0;
   display:flex;
   justify-content:center;
-  padding:20px;
+  align-items:center;
+  min-height:100vh;
 }
-.form-wrapper{
-  width:100%;
+.wrapper{
   max-width:420px;
-  background:#fff;
-  padding:15px;
-  box-sizing:border-box;
-  border-radius:6px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+  width:90%;
+  background:white;
+  padding:20px;
+  border-radius:12px;
 }
-input, button{
+h2{cursor:pointer;text-align:center;margin-bottom:15px;font-size:18px;}
+input,button{
   width:100%;
   padding:12px;
-  margin:6px 0;
+  margin-top:8px;
+  border-radius:6px;
+  border:1px solid #ccc;
   font-size:14px;
 }
 button{
   background:#1c2c8c;
-  color:#fff;
+  color:white;
   border:none;
   cursor:pointer;
 }
-.error{
-  color:red;
-  font-size:13px;
-  margin-bottom:8px;
+.adminPanel{
+  display:none;
+  margin-top:15px;
+  background:#eef1ff;
+  padding:12px;
+  border-radius:8px;
+  text-align:center;
+}
+#codeModal{
+  display:none;
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:rgba(0,0,0,0.6);
+  justify-content:center;
+  align-items:center;
+}
+.modalContent{
+  background:white;
+  padding:20px;
+  width:90%;
+  max-width:300px;
+  border-radius:10px;
+  text-align:center;
 }
 </style>
 </head>
 
 <body>
-<div class="form-wrapper">
 
-  <!-- Access Code -->
-  <div id="accessSection">
-    <h2>Enter Access Code</h2>
-    <div class="error" id="errorMsg"></div>
-    <input id="accessCode" placeholder="Access Code">
-    <button onclick="verifyCode()">Submit Code</button>
-  </div>
+<div class="wrapper">
 
-  <!-- Form (hidden until code verified) -->
-  <div id="formSection" style="display:none;">
-    <h2>Stanbic Receipt Form</h2>
-    <input id="amount" placeholder="Amount">
-    <input id="beneficiary" placeholder="Beneficiary Name">
-    <input id="beneficiaryAcc" placeholder="Beneficiary Account">
-    <input id="beneficiaryBank" placeholder="Beneficiary Bank">
-    <input id="sender" placeholder="Sender Name">
-    <input id="senderAcc" placeholder="Sender Account">
-    <input id="narration" placeholder="Narration">
-    <button onclick="generateReceipt()">Generate Receipt</button>
-  </div>
+<h2 onclick="tapAdmin()">Stanbic IBTC Transaction</h2>
+
+<input id="sender" placeholder="Sender Name">
+<input id="senderAcc" placeholder="Sender Account">
+
+<input id="beneficiary" placeholder="Beneficiary Name">
+<input id="beneficiaryAcc" placeholder="Beneficiary Account">
+<input id="beneficiaryBank" placeholder="Beneficiary Bank">
+
+<input id="amount" placeholder="Amount">
+<input id="narration" placeholder="Narration">
+
+<button onclick="showCodeModal()">Generate Receipt</button>
+
+<div id="adminPanel" class="adminPanel">
+<button onclick="generateCode()">Generate Access Code</button>
+<div id="codeDisplay"></div>
+</div>
 
 </div>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<!-- CODE MODAL -->
+<div id="codeModal">
+  <div class="modalContent">
+    <h3>Enter Access Code</h3>
+    <input id="userCode">
+    <button onclick="verifyCode()">Submit</button>
+  </div>
+</div>
 
-<script>
-// Your Firebase config
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, getDocs, query, where,
+  updateDoc, doc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 const firebaseConfig = {
-  apiKey: "AIzaSyCx5HepbLsipbGxJZe6IPp3fIzCEcYKwW0",
-  authDomain: "stanbic-receipt.firebaseapp.com",
-  databaseURL: "https://stanbic-receipt-default-rtdb.firebaseio.com",
-  projectId: "stanbic-receipt",
-  storageBucket: "stanbic-receipt.appspot.com",
-  messagingSenderId: "706087780174",
-  appId: "1:706087780174:web:0af087f8c042e5b1b8a81f",
-  measurementId: "G-ZXEKCY9PHG"
+  apiKey: "AIzaSyBCXfc6oFNUkx1qLWZt5ZqpY2yYzn0OTio",
+  authDomain: "stanbic-pro.firebaseapp.com",
+  projectId: "stanbic-pro",
+  storageBucket: "stanbic-pro.firebasestorage.app",
+  messagingSenderId: "430146762267",
+  appId: "1:430146762267:web:7653262e8cba7c1cc02abe"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-// Verify access code from Firebase
-async function verifyCode(){
-  const code = document.getElementById("accessCode").value.trim();
-  const errorMsg = document.getElementById("errorMsg");
+const ADMIN_PASSWORD = "admin123";
+let tapCount = 0;
 
-  if(!code){
-    errorMsg.innerText = "Enter access code!";
-    return;
+// 📌 DEVICE ID
+function getDeviceId(){
+  let id = localStorage.getItem("deviceId");
+  if(!id){
+    id = crypto.randomUUID();
+    localStorage.setItem("deviceId", id);
   }
-
-  try {
-    const snapshot = await db.ref("codes/"+code).get();
-    if(!snapshot.exists()){
-      errorMsg.innerText = "Invalid code!";
-      return;
-    }
-
-    const data = snapshot.val();
-    const now = Date.now();
-
-    if(data.expiry && now > data.expiry){
-      errorMsg.innerText = "Code expired!";
-      return;
-    }
-
-    // Access granted
-    localStorage.setItem("accessGranted", "true");
-    document.getElementById("accessSection").style.display="none";
-    document.getElementById("formSection").style.display="block";
-
-  } catch(err) {
-    console.error(err);
-    errorMsg.innerText = "Error verifying code!";
-  }
+  return id;
 }
 
-// Save form data and redirect to receipt
-function generateReceipt(){
-  const data = {
-    amount: document.getElementById("amount").value,
-    beneficiary: document.getElementById("beneficiary").value,
-    beneficiaryAcc: document.getElementById("beneficiaryAcc").value,
-    beneficiaryBank: document.getElementById("beneficiaryBank").value,
-    sender: document.getElementById("sender").value,
-    senderAcc: document.getElementById("senderAcc").value,
-    senderBank: "STANBIC IBTC BANK",
-    narration: document.getElementById("narration").value
+// 🔐 ADMIN
+window.tapAdmin = function(){
+  tapCount++;
+  if(tapCount>=5){
+    let pass = prompt("Enter Admin Password");
+    if(pass===ADMIN_PASSWORD){
+      adminPanel.style.display="block";
+      loadDashboard();
+    }
+    tapCount=0;
+  }
+};
+
+// 🔥 GENERATE CODE
+window.generateCode = async function(){
+
+  const newCode="PRO-"+Math.random().toString(36).substr(2,8).toUpperCase();
+
+  await addDoc(collection(db,"accessCodes"),{
+    code:newCode,
+    used:false,
+    device:"",
+    expires:Date.now()+30*24*60*60*1000,
+    created:serverTimestamp()
+  });
+
+  codeDisplay.innerText="NEW CODE: "+newCode;
+  loadDashboard();
+};
+
+// 📊 ADMIN DASHBOARD
+async function loadDashboard(){
+
+  const snap = await getDocs(collection(db,"accessCodes"));
+  let html="<h4>Active Codes</h4>";
+
+  snap.forEach(d=>{
+    const data=d.data();
+    if(!data.used && Date.now()<data.expires){
+      html+=`<div>${data.code}</div>`;
+    }
+  });
+
+  codeDisplay.innerHTML=html;
+}
+
+// 📌 SHOW MODAL
+window.showCodeModal=()=>codeModal.style.display="flex";
+
+// ✅ VERIFY CODE
+window.verifyCode = async function(){
+
+  const input=userCode.value.trim();
+  const deviceId=getDeviceId();
+
+  const activeQuery=query(collection(db,"accessCodes"),where("device","==",deviceId));
+  const activeSnap=await getDocs(activeQuery);
+
+  if(!activeSnap.empty){
+    const data=activeSnap.docs[0].data();
+    if(Date.now()<data.expires){
+      grantAccess();
+      return;
+    }
+  }
+
+  const q=query(collection(db,"accessCodes"),where("code","==",input));
+  const snap=await getDocs(q);
+
+  if(snap.empty){alert("Invalid code");return;}
+
+  const docRef=snap.docs[0];
+  const data=docRef.data();
+
+  if(data.used){alert("Code already used");return;}
+  if(Date.now()>data.expires){alert("Code expired");return;}
+
+  await updateDoc(doc(db,"accessCodes",docRef.id),{
+    used:true,
+    device:deviceId
+  });
+
+  grantAccess();
+};
+
+// 🎯 ACCESS GRANTED
+function grantAccess(){
+
+  const receiptData={
+    sender:sender.value,
+    senderAcc:senderAcc.value,
+    senderBank:"STANBIC IBTC BANK",
+    beneficiary:beneficiary.value,
+    beneficiaryAcc:beneficiaryAcc.value,
+    beneficiaryBank:beneficiaryBank.value,
+    amount:amount.value,
+    narration:narration.value,
+    date:new Date().toLocaleString(),
+    ref:Math.floor(Math.random()*1000000000000)
   };
 
-  sessionStorage.setItem("receiptData", JSON.stringify(data));
-  window.location.href = "receipt.html";
+  sessionStorage.setItem("receiptData",JSON.stringify(receiptData));
+  localStorage.setItem("accessGranted",true);
+
+  location.href="receipt.html";
 }
+
 </script>
+
 </body>
 </html>
