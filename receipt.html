@@ -9,69 +9,39 @@
 
 <style>
 body{
-margin:0;
-font-family:"Segoe UI",Arial,sans-serif;
-background:#f2f2f2;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
+  margin:0;
+  font-family:"Segoe UI", Arial;
+  background:#fff;
 }
-
-.receipt{
-width:375px;
-height:667px;
-background:white;
-border-radius:15px;
-padding:15px;
-box-sizing:border-box;
-overflow:hidden;
-position:relative;
+#receipt{
+  width:100%;
+  max-width:420px;
+  margin:auto;
+  padding:18px;
+  box-sizing:border-box;
 }
-
-.logo{text-align:right;}
-.logo img{width:60px;}
-
-h3{margin:10px 0 5px;font-size:18px;}
-.date{font-size:12px;color:#555;margin-bottom:8px;}
-.divider{border-bottom:2px solid #2e3aa1;margin:10px 0;}
-.row{display:flex;justify-content:space-between;font-size:12px;margin:4px 0;}
-.label{color:#222;}
-.value{text-align:right;font-weight:500;}
-.value div{margin-bottom:2px;}
-.status{font-weight:600;}
-
-.notice{
-background:#e9efff;
-padding:10px;
-margin-top:10px;
-font-size:12px;
-line-height:1.4;
+.logo{
+  text-align:right;
 }
-
-button{
-position:absolute;
-bottom:15px;
-left:15px;
-right:15px;
-padding:12px;
-border:none;
-background:#1c2c8c;
-color:white;
-font-size:14px;
-border-radius:8px;
-}
+.logo img{ width:65px; }
+h3{ margin:10px 0 5px; font-size:20px; }
+.date{ font-size:13px; color:#555; margin-bottom:10px; }
+.divider{ border-bottom:2px solid #2e3aa1; margin:12px 0; }
+.row{ display:flex; justify-content:space-between; align-items:flex-start; font-size:13px; }
+.label{ color:#222; }
+.value{ text-align:right; font-weight:500; }
+.value div{ margin-bottom:2px; }
+.status{ font-weight:600; }
+.notice{ background:#e6f0fb; padding:15px; margin-top:25px; font-size:14px; line-height:1.6; }
+button{ width:100%; padding:12px; margin-top:15px; border:none; background:#1c2c8c; color:#fff; font-size:15px; }
 </style>
 </head>
 
-<body>
+<body onload="loadReceipt()">
 
-<div class="receipt" id="receipt">
+<div id="receipt">
 
-<div class="logo">
-<img src="logo.png">
-</div>
-
+<div class="logo"><img src="logo.png"></div>
 <h3>Online Transaction Receipt</h3>
 <div class="date" id="date"></div>
 
@@ -79,33 +49,21 @@ border-radius:8px;
 
 <div class="row">
 <div class="label">TRANSACTION</div>
-<div class="value">
-<div id="amount"></div>
-<div>ONE OFF PAYMENT</div>
-<div id="transDate"></div>
-</div>
+<div class="value"><div id="amount"></div><div>ONE OFF PAYMENT</div><div id="transDate"></div></div>
 </div>
 
 <div class="divider"></div>
 
 <div class="row">
 <div class="label">BENEFICIARY</div>
-<div class="value">
-<div id="beneficiary"></div>
-<div id="beneficiaryAcc"></div>
-<div id="beneficiaryBank"></div>
-</div>
+<div class="value"><div id="beneficiary"></div><div id="beneficiaryAcc"></div><div id="beneficiaryBank"></div></div>
 </div>
 
 <div class="divider"></div>
 
 <div class="row">
 <div class="label">SENDER</div>
-<div class="value">
-<div id="sender"></div>
-<div id="senderAcc"></div>
-<div id="senderBank"></div>
-</div>
+<div class="value"><div id="sender"></div><div id="senderAcc"></div><div>STANBIC IBTC BANK</div></div>
 </div>
 
 <div class="divider"></div>
@@ -123,60 +81,49 @@ border-radius:8px;
 </div>
 
 <div class="notice">
-<b>Notice</b><br>
-This is an online auto generated transaction receipt.<br>
-This is an authentic receipt, for further inquiries contact 0700 909 909 909<br>
-Email CustomerCareNigeria@stanbicibtc.com<br>
+<b>Notice</b><br><br>
+This is an online auto generated transaction receipt.<br><br>
+This is an authentic receipt, for further inquiries, contact 0700 909 909 909<br><br>
+Email CustomerCareNigeria@stanbicibtc.com<br><br>
 Generated from Stanbic IBTC Super App
+</div>
+
 </div>
 
 <button onclick="downloadReceipt()">Download Image</button>
 
-</div>
-
 <script>
-if(!localStorage.getItem("accessGranted")){
-window.location.href="index.html";
-}
-
-function formatMoney(amount){ return "NGN "+Number(amount).toLocaleString(undefined,{minimumFractionDigits:2}); }
-
-function getFullDate(){ 
-let d=new Date();
-return d.toLocaleString("en-GB",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"}); 
-}
-
-function getShortDate(){ 
-let d=new Date();
-return d.toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
-}
-
 function loadReceipt(){
-document.getElementById("date").innerHTML=getFullDate();
-document.getElementById("transDate").innerHTML=getShortDate();
-document.getElementById("amount").innerHTML=formatMoney(localStorage.getItem("amount"));
-document.getElementById("beneficiary").innerHTML=localStorage.getItem("beneficiary");
-document.getElementById("beneficiaryAcc").innerHTML=localStorage.getItem("beneficiaryAcc");
-document.getElementById("beneficiaryBank").innerHTML=localStorage.getItem("beneficiaryBank");
-document.getElementById("sender").innerHTML=localStorage.getItem("sender");
-document.getElementById("senderAcc").innerHTML=localStorage.getItem("senderAcc");
-document.getElementById("senderBank").innerHTML=localStorage.getItem("senderBank");
-document.getElementById("narration").innerHTML=localStorage.getItem("narration");
+  if(!localStorage.getItem("stanbic_access")) location.href="index.html";
+
+  const data = JSON.parse(sessionStorage.getItem("receiptData"));
+  if(!data) location.href="index.html";
+
+  amount.innerHTML = "NGN " + Number(data.amount).toLocaleString(undefined,{minimumFractionDigits:2});
+  transDate.innerHTML = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
+  date.innerHTML = new Date().toLocaleString("en-GB",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
+
+  sender.innerHTML = data.sender;
+  senderAcc.innerHTML = data.senderAcc;
+
+  beneficiary.innerHTML = data.beneficiary;
+  beneficiaryAcc.innerHTML = data.beneficiaryAcc;
+  beneficiaryBank.innerHTML = data.beneficiaryAcc; // optional, same as account
+  narration.innerHTML = data.narration;
 }
 
 function downloadReceipt(){
-const btn=document.querySelector("button");
-btn.style.display="none";
-html2canvas(document.querySelector("#receipt"),{scale:3}).then(canvas=>{
-let link=document.createElement("a");
-link.download="stanbic_receipt.png";
-link.href=canvas.toDataURL();
-link.click();
-btn.style.display="block";
-});
-}
+  const btn = document.querySelector("button");
+  btn.style.display="none";
 
-loadReceipt();
+  html2canvas(document.getElementById("receipt"),{scale:3}).then(canvas=>{
+    const link=document.createElement("a");
+    link.download="stanbic_receipt.png";
+    link.href=canvas.toDataURL("image/png");
+    link.click();
+    btn.style.display="block";
+  });
+}
 </script>
 
 </body>
