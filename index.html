@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stanbic Receipt Generator</title>
-
 <style>
 body{
   font-family:"Segoe UI", Arial;
@@ -59,7 +58,6 @@ button{
 }
 </style>
 </head>
-
 <body>
 
 <div class="wrapper">
@@ -68,17 +66,14 @@ button{
 
 <input id="sender" placeholder="Sender Name">
 <input id="senderAcc" placeholder="Sender Account">
-
 <input id="beneficiary" placeholder="Beneficiary Name">
 <input id="beneficiaryAcc" placeholder="Beneficiary Account">
 <input id="beneficiaryBank" placeholder="Beneficiary Bank">
-
 <input id="amount" placeholder="Amount">
 <input id="narration" placeholder="Narration">
-
 <button onclick="showCodeModal()">Generate Receipt</button>
 
-</div> <!-- END wrapper -->
+</div>
 
 <!-- CODE INPUT MODAL -->
 <div id="codeModal">
@@ -90,11 +85,10 @@ button{
 </div>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ===== Firebase config =====
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyBCXfc6oFNUkx1qLWZt5ZqpY2yYzn0OTio",
   authDomain: "stanbic-pro.firebaseapp.com",
@@ -107,47 +101,31 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ===== Show modal =====
+// Show modal
 function showCodeModal(){
   document.getElementById("codeModal").style.display="flex";
 }
 
-// ===== Verify Firestore access code =====
+// Verify code and generate receipt
 async function verifyCode(){
   const input = document.getElementById("userCode").value.trim();
-  const now = Date.now();
-
-  if(!input){
-    alert("Please enter access code");
-    return;
-  }
-
+  if(!input){ alert("Enter access code"); return; }
   try{
     const q = query(collection(db,"accessCodes"), where("code","==",input));
     const snap = await getDocs(q);
-
-    if(snap.empty){
-      alert("Invalid code");
-      return;
-    }
+    if(snap.empty){ alert("Invalid code"); return; }
 
     let docData, docId;
-    snap.forEach(d => { docData=d.data(); docId=d.id; });
+    snap.forEach(d=>{ docData=d.data(); docId=d.id; });
 
-    if(docData.used){
-      alert("Code already used");
-      return;
-    }
-
-    if(now > docData.expires){
-      alert("Code expired");
-      return;
-    }
+    const now = Date.now();
+    if(docData.used){ alert("Code already used"); return; }
+    if(now > docData.expires){ alert("Code expired"); return; }
 
     // Mark code as used
     await updateDoc(doc(db,"accessCodes",docId),{used:true});
 
-    // Save form data
+    // Save receipt data
     const receiptData = {
       sender: sender.value,
       senderAcc: senderAcc.value,
@@ -160,17 +138,11 @@ async function verifyCode(){
       date: new Date().toLocaleString(),
       ref: Math.floor(Math.random()*1000000000000)
     };
-
-    sessionStorage.setItem("receiptData", JSON.stringify(receiptData));
-    localStorage.setItem("accessGranted", true);
+    sessionStorage.setItem("receiptData",JSON.stringify(receiptData));
     location.href = "receipt.html";
 
-  } catch(e){
-    console.error(e);
-    alert("Error verifying code: "+e.message);
-  }
+  }catch(e){ alert("Error: "+e.message); console.error(e); }
 }
-
 </script>
 
 </body>
