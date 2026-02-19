@@ -4,116 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stanbic Receipt</title>
-
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-
 <style>
-body{
-  margin:0;
-  background:#f2f2f2;
-  font-family:"Segoe UI", Arial;
-  display:flex;
-  justify-content:center;
-}
-
-.screen{
-  width:100%;
-  max-width:430px;
-}
-
-/* REAL RECEIPT SIZE */
-#receipt{
-  width:390px;
-  background:#fff;
-  padding:14px;
-  box-sizing:border-box;
-  margin:auto;
-}
-
-/* SCALE FOR SMALL PHONES */
-@media(max-width:430px){
-  #receipt{
-    transform:scale(calc(100vw / 430));
-    transform-origin:top center;
-  }
-}
-
-.logo{text-align:right;}
-.logo img{width:60px;}
-
-h3{
-  margin:6px 0 3px;
-  font-size:18px;
-}
-
-.date{
-  font-size:12px;
-  color:#555;
-  margin-bottom:6px;
-}
-
-.divider{
-  border-bottom:2px solid #2e3aa1;
-  margin:8px 0;
-}
-
-.row{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  font-size:12px;
-  margin:2px 0;
-}
-
+body{margin:0;background:#f2f2f2;font-family:"Segoe UI", Arial;display:flex;justify-content:center}
+.screen{width:100%;max-width:430px;}
+#receipt{width:390px;background:#fff;padding:14px;margin:auto;box-sizing:border-box;}
+@media(max-width:430px){#receipt{transform:scale(calc(100vw / 430));transform-origin:top center;}}
+.logo{text-align:right;} .logo img{width:60px;}
+h3{margin:6px 0 3px;font-size:18px;}
+.date{font-size:12px;color:#555;margin-bottom:6px;}
+.divider{border-bottom:2px solid #2e3aa1;margin:8px 0;}
+.row{display:flex;justify-content:space-between;align-items:flex-start;font-size:12px;margin:2px 0;}
 .label{color:#222;}
-
-.value{
-  text-align:right;
-  font-weight:500;
-}
-
-.value div{
-  margin-bottom:1px;
-}
-
+.value{text-align:right;font-weight:500;}
+.value div{margin-bottom:1px;}
 .status{font-weight:600;}
-
-.notice{
-  background:#e6f0fb;
-  padding:12px;
-  margin-top:14px;
-  font-size:12px;
-  line-height:1.45;
-}
-
-button{
-  width:100%;
-  padding:11px;
-  margin:12px auto;
-  border:none;
-  background:#1c2c8c;
-  color:#fff;
-  font-size:14px;
-  display:block;
-}
+.notice{background:#e6f0fb;padding:12px;margin-top:14px;font-size:12px;line-height:1.45;}
+button{width:100%;padding:11px;margin:12px auto;border:none;background:#1c2c8c;color:#fff;font-size:14px;display:block;}
 </style>
 </head>
-
 <body onload="loadReceipt()">
-
 <div class="screen">
-
 <div id="receipt">
-
-<div class="logo">
-<img src="logo.png">
-</div>
-
+<div class="logo"><img src="logo.png"></div>
 <h3>Online Transaction Receipt</h3>
 <div class="date" id="date"></div>
-
 <div class="divider"></div>
-
 <div class="row">
 <div class="label">TRANSACTION</div>
 <div class="value">
@@ -122,9 +38,7 @@ button{
 <div id="transDate"></div>
 </div>
 </div>
-
 <div class="divider"></div>
-
 <div class="row">
 <div class="label">BENEFICIARY</div>
 <div class="value">
@@ -133,9 +47,7 @@ button{
 <div id="beneficiaryBank"></div>
 </div>
 </div>
-
 <div class="divider"></div>
-
 <div class="row">
 <div class="label">SENDER</div>
 <div class="value">
@@ -144,80 +56,50 @@ button{
 <div>STANBIC IBTC BANK</div>
 </div>
 </div>
-
 <div class="divider"></div>
-
 <div class="row">
 <div class="label">STATUS</div>
 <div class="value status">SUCCESSFUL</div>
 </div>
-
 <div class="divider"></div>
-
 <div class="row">
 <div class="label">NARRATION</div>
 <div class="value" id="narration"></div>
 </div>
-
 <div class="notice">
 <b>Notice</b><br><br>
 This is an online auto generated transaction receipt.<br><br>
-This is an authentic receipt, for further inquiries, contact  
-0700 909 909 909<br><br>
+This is an authentic receipt, for further inquiries, contact 0700 909 909 909<br><br>
 Email CustomerCareNigeria@stanbicibtc.com<br><br>
 Generated from Stanbic IBTC Super App
 </div>
-
 </div>
-
 <button onclick="downloadReceipt()">Download Image</button>
-
 </div>
 
 <script>
 function loadReceipt(){
-
-  // redirect if access not granted
-  if(!localStorage.getItem("accessGranted")){
-    location.href="index.html";
-  }
-
-  const data = JSON.parse(sessionStorage.getItem("receiptData"));
-
-  amount.innerHTML =
-  "NGN "+Number(data.amount).toLocaleString(undefined,{minimumFractionDigits:2});
-
-  transDate.innerHTML = new Date().toLocaleDateString();
-
-  date.innerHTML = new Date().toLocaleString();
-
-  sender.innerHTML = data.sender;
-  senderAcc.innerHTML = data.senderAcc;
-
-  beneficiary.innerHTML = data.beneficiary;
-  beneficiaryAcc.innerHTML = data.beneficiaryAcc;
-  beneficiaryBank.innerHTML = data.beneficiaryBank;
-
-  narration.innerHTML = data.narration;
+  if(!localStorage.getItem("accessGranted")) location.href="index.html";
+  const data=JSON.parse(sessionStorage.getItem("receiptData"));
+  amount.innerHTML="NGN "+Number(data.amount).toLocaleString(undefined,{minimumFractionDigits:2});
+  transDate.innerHTML=new Date().toLocaleDateString();
+  date.innerHTML=new Date().toLocaleString();
+  sender.innerHTML=data.sender;
+  senderAcc.innerHTML=data.senderAcc;
+  beneficiary.innerHTML=data.beneficiary;
+  beneficiaryAcc.innerHTML=data.beneficiaryAcc;
+  beneficiaryBank.innerHTML=data.beneficiaryBank;
+  narration.innerHTML=data.narration;
 }
-
 function downloadReceipt(){
-
-  const btn = document.querySelector("button");
-  btn.style.display="none";
-
-  html2canvas(document.getElementById("receipt"),{
-    scale:3
-  }).then(canvas=>{
+  const btn=document.querySelector("button"); btn.style.display="none";
+  html2canvas(document.getElementById("receipt"),{scale:3}).then(canvas=>{
     let link=document.createElement("a");
     link.download="stanbic_receipt.png";
     link.href=canvas.toDataURL("image/png");
-    link.click();
-    btn.style.display="block";
+    link.click(); btn.style.display="block";
   });
-
 }
 </script>
-
 </body>
 </html>
