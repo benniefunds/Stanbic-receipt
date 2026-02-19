@@ -27,14 +27,14 @@ button{background:#1c2c8c;color:white;border:none;cursor:pointer;}
 <input id="amount" placeholder="Amount">
 <input id="narration" placeholder="Narration">
 
-<button onclick="showCodeModal()">Generate Receipt</button>
+<button id="generateBtn">Generate Receipt</button>
 </div>
 
 <div id="codeModal">
   <div class="modalContent">
     <h3>Enter Access Code</h3>
     <input id="userCode">
-    <button onclick="verifyCode()">Submit</button>
+    <button id="submitCode">Submit</button>
   </div>
 </div>
 
@@ -42,6 +42,7 @@ button{background:#1c2c8c;color:white;border:none;cursor:pointer;}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyBCXfc6oFNUkx1qLWZt5ZqpY2yYzn0OTio",
   authDomain: "stanbic-pro.firebaseapp.com",
@@ -50,13 +51,17 @@ const firebaseConfig = {
   messagingSenderId: "430146762267",
   appId: "1:430146762267:web:7653262e8cba7c1cc02abe"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-function showCodeModal(){document.getElementById("codeModal").style.display="flex";}
+// Event listeners
+const generateBtn = document.getElementById("generateBtn");
+const codeModal = document.getElementById("codeModal");
+const submitBtn = document.getElementById("submitCode");
 
-async function verifyCode(){
+generateBtn.addEventListener("click", ()=>{ codeModal.style.display="flex"; });
+
+submitBtn.addEventListener("click", async ()=>{
   const codeInput = document.getElementById("userCode").value.trim();
   if(!codeInput){ alert("Enter access code"); return; }
 
@@ -69,7 +74,7 @@ async function verifyCode(){
 
   const now = Date.now();
   if(docData.used){ alert("Code already used"); return; }
-  if(now > docData.expires){ alert("Code expired"); return; }
+  if(now>docData.expires){ alert("Code expired"); return; }
 
   await updateDoc(doc(db,"accessCodes",docId), {used:true});
 
@@ -87,8 +92,8 @@ async function verifyCode(){
   };
 
   sessionStorage.setItem("receiptData", JSON.stringify(receiptData));
-  location.href = "receipt.html";
-}
+  location.href="receipt.html";
+});
 </script>
 </body>
 </html>
