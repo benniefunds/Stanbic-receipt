@@ -94,6 +94,8 @@ Generated from Stanbic IBTC Super App
 
 <script>
 function loadReceipt(){
+  if(!localStorage.getItem("stanbic_access")) location.href="index.html";
+
   const data = JSON.parse(sessionStorage.getItem("receiptData"));
   if(!data) location.href="index.html";
 
@@ -106,7 +108,7 @@ function loadReceipt(){
 
   beneficiary.innerHTML = data.beneficiary;
   beneficiaryAcc.innerHTML = data.beneficiaryAcc;
-  beneficiaryBank.innerHTML = data.beneficiaryAcc;
+  beneficiaryBank.innerHTML = data.beneficiaryAcc; // optional, same as account
   narration.innerHTML = data.narration;
 }
 
