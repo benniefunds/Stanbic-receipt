@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stanbic Admin</title>
+<title>Stanbic Admin PRO MAX - Live</title>
 
 <style>
 body{
@@ -23,10 +23,7 @@ body{
   margin-bottom:15px;
   box-shadow:0 4px 12px rgba(0,0,0,0.08);
 }
-h3{
-  margin:0 0 10px 0;
-  font-size:20px;
-}
+h3{margin:0 0 10px 0;font-size:20px;}
 input, select, button{
   width:100%;
   padding:12px;
@@ -36,26 +33,11 @@ input, select, button{
   font-size:14px;
   box-sizing:border-box;
 }
-button{
-  cursor:pointer;
-  font-weight:600;
-  transition:0.2s;
-}
-button:hover{
-  opacity:0.9;
-}
-.topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  flex-wrap:wrap;
-}
+button{cursor:pointer;font-weight:600;transition:0.2s}
+button:hover{opacity:0.9}
+.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
 #dashboard{display:none;}
-#stats{
-  font-size:14px;
-  margin-bottom:10px;
-  font-weight:600;
-}
+#stats{font-size:14px;margin-bottom:10px;font-weight:600;}
 .codeCard{
   background:#fdfdfd;
   padding:12px;
@@ -68,16 +50,8 @@ button:hover{
   align-items:center;
   flex-wrap:wrap;
 }
-.codeInfo{
-  flex:1 1 60%;
-}
-.codeButtons{
-  flex:1 1 35%;
-  display:flex;
-  gap:5px;
-  justify-content:flex-end;
-  flex-wrap:wrap;
-}
+.codeInfo{flex:1 1 60%;}
+.codeButtons{flex:1 1 35%;display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;}
 .generateBtn{background:linear-gradient(90deg,#1c2c8c,#3a49c5);color:white;border:none;}
 .deleteBtn{background:#ff4d4d;color:white;border:none;}
 .revokeBtn{background:#ff9800;color:white;border:none;}
@@ -90,6 +64,7 @@ input:focus, select:focus{outline:none;border-color:#3a49c5;box-shadow:0 0 5px r
 
 <div class="container">
 
+<!-- LOGIN -->
 <div class="card" id="loginBox">
 <h3>Admin Login</h3>
 <input id="email" placeholder="Email">
@@ -97,6 +72,7 @@ input:focus, select:focus{outline:none;border-color:#3a49c5;box-shadow:0 0 5px r
 <button onclick="login()">Login</button>
 </div>
 
+<!-- DASHBOARD -->
 <div id="dashboard">
 
 <div class="card topbar">
@@ -136,6 +112,7 @@ import {
 getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+// ===== Firebase config =====
 const firebaseConfig = {
 apiKey: "AIzaSyBCXfc6oFNUkx1qLWZt5ZqpY2yYzn0OTio",
 authDomain: "stanbic-pro.firebaseapp.com",
@@ -149,79 +126,110 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// ===== Auth state check =====
 onAuthStateChanged(auth,user=>{
 if(user){
 loginBox.style.display="none";
 dashboard.style.display="block";
 loadCodes();
+startAutoRefresh();
 }else{
 loginBox.style.display="block";
 dashboard.style.display="none";
+stopAutoRefresh();
 }
 });
 
-window.login=()=>signInWithEmailAndPassword(auth,email.value,password.value);
+// ===== Login / Logout =====
+window.login=()=>signInWithEmailAndPassword(auth,email.value,password.value)
+  .catch(e=>alert("Login failed: "+e.message));
 window.logout=()=>signOut(auth);
 
+// ===== Generate Code =====
 window.generateCode=async()=>{
-const newCode="PRO-"+Math.random().toString(36).substr(2,8).toUpperCase();
-await addDoc(collection(db,"accessCodes"),{
-code:newCode, used:false, device:"", expires:Date.now()+30*24*60*60*1000, created:serverTimestamp()
-});
-loadCodes();
+  try{
+    const newCode="PRO-"+Math.random().toString(36).substr(2,8).toUpperCase();
+    await addDoc(collection(db,"accessCodes"),{
+      code:newCode,
+      used:false,
+      device:"",
+      expires:Date.now()+30*24*60*60*1000,
+      created:serverTimestamp()
+    });
+    loadCodes();
+  } catch(e){
+    console.error("Error generating code:",e);
+    alert("Error generating code: "+e.message);
+  }
 };
 
+// ===== Load Codes =====
 async function loadCodes(){
-const snap=await getDocs(collection(db,"accessCodes"));
-let search=search.value.toLowerCase();
-let filter=filter.value;
-let total=0,active=0,used=0,expired=0;
-let html="";
+  const snap = await getDocs(collection(db,"accessCodes"));
+  let searchVal = search.value.toLowerCase();
+  let filterVal = filter.value;
+  let total=0,active=0,used=0,expired=0;
+  let html="";
 
-snap.forEach(docu=>{
-const d=docu.data();
-const id=docu.id;
-const now=Date.now();
-let status="active";
-if(now>d.expires){status="expired";expired++;}
-else if(d.used){status="used";used++;}
-else{active++;}
-total++;
-if(filter!=="all" && filter!==status) return;
-if(!d.code.toLowerCase().includes(search)) return;
+  snap.forEach(docu=>{
+    const d = docu.data();
+    const id = docu.id;
+    const now = Date.now();
+    let status="active";
+    if(now>d.expires){status="expired";expired++;}
+    else if(d.used){status="used";used++;}
+    else{active++;}
+    total++;
+    if(filterVal!=="all" && filterVal!==status) return;
+    if(!d.code.toLowerCase().includes(searchVal)) return;
 
-html+=`
-<div class="codeCard">
-<div class="codeInfo">
-<b>${d.code}</b><br>
-Status: ${status}<br>
-Expires: ${new Date(d.expires).toLocaleDateString()}<br>
-${d.device?`Device: ${d.device}<br>`:""}
-</div>
-<div class="codeButtons">
-<button class="copyBtn" onclick="copyCode('${d.code}')">Copy</button>
-<button class="revokeBtn" onclick="revoke('${id}')">Revoke</button>
-<button class="deleteBtn" onclick="del('${id}')">Delete</button>
-</div>
-</div>
-`;
-});
+    html+=`
+    <div class="codeCard">
+      <div class="codeInfo">
+        <b>${d.code}</b><br>
+        Status: ${status}<br>
+        Expires: ${new Date(d.expires).toLocaleDateString()}<br>
+        ${d.device?`Device: ${d.device}<br>`:""}
+      </div>
+      <div class="codeButtons">
+        <button class="copyBtn" onclick="copyCode('${d.code}')">Copy</button>
+        <button class="revokeBtn" onclick="revoke('${id}')">Revoke</button>
+        <button class="deleteBtn" onclick="del('${id}')">Delete</button>
+      </div>
+    </div>
+    `;
+  });
 
-stats.innerHTML=`Total: ${total} | Active: ${active} | Used: ${used} | Expired: ${expired}`;
-codes.innerHTML=html;
+  stats.innerHTML=`Total: ${total} | Active: ${active} | Used: ${used} | Expired: ${expired}`;
+  codes.innerHTML=html;
 }
 
-window.copyCode=code=>navigator.clipboard.writeText(code);
-window.revoke=async id=>{
-await updateDoc(doc(db,"accessCodes",id),{used:false,device:""});
-loadCodes();
+// ===== Actions =====
+window.copyCode = code => navigator.clipboard.writeText(code);
+window.revoke = async id=>{
+  await updateDoc(doc(db,"accessCodes",id),{used:false,device:""});
+  loadCodes();
 };
-window.del=async id=>{
-if(confirm("Delete code?")){
-await deleteDoc(doc(db,"accessCodes",id));
-loadCodes();
+window.del = async id=>{
+  if(confirm("Delete code?")){
+    await deleteDoc(doc(db,"accessCodes",id));
+    loadCodes();
+  }
+};
+
+// ===== Real-time Auto Refresh =====
+let refreshInterval;
+
+function startAutoRefresh(){
+  if(!refreshInterval){
+    refreshInterval = setInterval(loadCodes,5000); // every 5 seconds
+  }
 }
-};
+
+function stopAutoRefresh(){
+  clearInterval(refreshInterval);
+  refreshInterval = null;
+}
 
 </script>
 </body>
