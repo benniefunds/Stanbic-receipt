@@ -22,8 +22,7 @@ body{
   padding:20px;
   border-radius:12px;
 }
-h2{cursor:pointer;text-align:center;margin-bottom:15px;font-size:18px;}
-input,button,select{
+input,button{
   width:100%;
   padding:12px;
   margin-top:8px;
@@ -37,23 +36,22 @@ button{
   border:none;
   cursor:pointer;
 }
-.adminPanel{
+#codeModal{
   display:none;
-  margin-top:15px;
-  background:#eef1ff;
-  padding:12px;
-  border-radius:8px;
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:rgba(0,0,0,0.6);
+  justify-content:center;
+  align-items:center;
 }
-.codeCard{
+.modalContent{
   background:white;
-  padding:8px;
-  border-radius:6px;
-  margin-top:6px;
-  font-size:12px;
-}
-.stat{
-  font-size:13px;
-  margin-bottom:10px;
+  padding:20px;
+  width:90%;
+  max-width:300px;
+  border-radius:10px;
+  text-align:center;
 }
 </style>
 </head>
@@ -62,51 +60,37 @@ button{
 
 <div class="wrapper">
 
-<h2 onclick="tapAdmin()">Stanbic IBTC Transaction</h2>
+<h2>Stanbic IBTC Transaction</h2>
 
 <input id="sender" placeholder="Sender Name">
 <input id="senderAcc" placeholder="Sender Account">
+
 <input id="beneficiary" placeholder="Beneficiary Name">
 <input id="beneficiaryAcc" placeholder="Beneficiary Account">
 <input id="beneficiaryBank" placeholder="Beneficiary Bank">
+
 <input id="amount" placeholder="Amount">
 <input id="narration" placeholder="Narration">
 
 <button onclick="showCodeModal()">Generate Receipt</button>
 
-<div id="adminPanel" class="adminPanel">
-
-<button onclick="generateCode()">Generate Access Code</button>
-
-<input id="searchBox" placeholder="Search code..." oninput="loadDashboard()">
-
-<select id="filter" onchange="loadDashboard()">
-<option value="all">All</option>
-<option value="active">Active</option>
-<option value="used">Used</option>
-<option value="expired">Expired</option>
-</select>
-
-<div id="codeDisplay"></div>
-
 </div>
 
-</div>
-
-<div id="codeModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);justify-content:center;align-items:center">
-<div style="background:white;padding:20px;width:90%;max-width:300px;border-radius:10px;text-align:center">
-<h3>Enter Access Code</h3>
-<input id="userCode">
-<button onclick="verifyCode()">Submit</button>
-</div>
+<!-- CODE MODAL -->
+<div id="codeModal">
+  <div class="modalContent">
+    <h3>Enter Access Code</h3>
+    <input id="userCode">
+    <button onclick="verifyCode()">Submit</button>
+  </div>
 </div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, getDocs, query, where,
-  updateDoc, deleteDoc, doc, serverTimestamp
+  getFirestore, collection, query, where, getDocs,
+  updateDoc, doc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -121,164 +105,96 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const ADMIN_PASSWORD="admin123";
-let tapCount=0;
-
+// 📌 DEVICE ID
 function getDeviceId(){
-let id=localStorage.getItem("deviceId");
-if(!id){id=crypto.randomUUID();localStorage.setItem("deviceId",id);}
-return id;
+  let id = localStorage.getItem("deviceId");
+  if(!id){
+    id = crypto.randomUUID();
+    localStorage.setItem("deviceId", id);
+  }
+  return id;
 }
 
-window.tapAdmin=function(){
-tapCount++;
-if(tapCount>=5){
-let pass=prompt("Enter Admin Password");
-if(pass===ADMIN_PASSWORD){
-adminPanel.style.display="block";
-loadDashboard();
-}
-tapCount=0;
-}
+// SHOW MODAL
+window.showCodeModal = () =>
+  document.getElementById("codeModal").style.display = "flex";
+
+// VERIFY ACCESS CODE
+window.verifyCode = async function(){
+
+  const input = userCode.value.trim();
+  const deviceId = getDeviceId();
+
+  // CHECK EXISTING DEVICE ACCESS
+  const activeQuery = query(
+    collection(db,"accessCodes"),
+    where("device","==",deviceId)
+  );
+
+  const activeSnap = await getDocs(activeQuery);
+
+  if(!activeSnap.empty){
+    const data = activeSnap.docs[0].data();
+    if(Date.now() < data.expires){
+      grantAccess();
+      return;
+    }
+  }
+
+  // VERIFY CODE
+  const q = query(
+    collection(db,"accessCodes"),
+    where("code","==",input)
+  );
+
+  const snap = await getDocs(q);
+
+  if(snap.empty){
+    alert("Invalid code");
+    return;
+  }
+
+  const docRef = snap.docs[0];
+  const data = docRef.data();
+
+  if(data.used){
+    alert("Code already used");
+    return;
+  }
+
+  if(Date.now() > data.expires){
+    alert("Code expired");
+    return;
+  }
+
+  await updateDoc(doc(db,"accessCodes",docRef.id),{
+    used:true,
+    device:deviceId
+  });
+
+  grantAccess();
 };
 
-window.generateCode=async function(){
-const newCode="PRO-"+Math.random().toString(36).substr(2,8).toUpperCase();
-
-await addDoc(collection(db,"accessCodes"),{
-code:newCode,
-used:false,
-device:"",
-expires:Date.now()+30*24*60*60*1000,
-created:serverTimestamp()
-});
-
-loadDashboard();
-};
-
-async function loadDashboard(){
-
-const snap=await getDocs(collection(db,"accessCodes"));
-
-let search=searchBox.value.toLowerCase();
-let filter=filter.value;
-
-let total=0,active=0,used=0,expired=0;
-
-let html="";
-
-snap.forEach(docu=>{
-
-const d=docu.data();
-const id=docu.id;
-const now=Date.now();
-
-let status="active";
-
-if(now>d.expires){status="expired";expired++;}
-else if(d.used){status="used";used++;}
-else{active++;}
-
-total++;
-
-if(filter!=="all" && filter!==status) return;
-if(!d.code.toLowerCase().includes(search)) return;
-
-html+=`
-<div class="codeCard">
-<b>${d.code}</b><br>
-Status: ${status}<br>
-Expires: ${new Date(d.expires).toLocaleDateString()}<br>
-${d.device?`Device: ${d.device}<br>`:""}
-
-<button onclick="copyCode('${d.code}')">Copy</button>
-<button onclick="revokeDevice('${id}')">Revoke</button>
-<button onclick="deleteCode('${id}')">Delete</button>
-</div>
-`;
-});
-
-codeDisplay.innerHTML=`
-<div class="stat">
-Total: ${total} |
-Active: ${active} |
-Used: ${used} |
-Expired: ${expired}
-</div>
-${html}
-`;
-}
-
-window.copyCode=code=>navigator.clipboard.writeText(code);
-
-window.deleteCode=async id=>{
-if(confirm("Delete code?")){
-await deleteDoc(doc(db,"accessCodes",id));
-loadDashboard();
-}
-};
-
-window.revokeDevice=async id=>{
-await updateDoc(doc(db,"accessCodes",id),{
-used:false,
-device:""
-});
-loadDashboard();
-};
-
-window.showCodeModal=()=>codeModal.style.display="flex";
-
-window.verifyCode=async function(){
-
-const input=userCode.value.trim();
-const deviceId=getDeviceId();
-
-const activeQuery=query(collection(db,"accessCodes"),where("device","==",deviceId));
-const activeSnap=await getDocs(activeQuery);
-
-if(!activeSnap.empty){
-const data=activeSnap.docs[0].data();
-if(Date.now()<data.expires){grantAccess();return;}
-}
-
-const q=query(collection(db,"accessCodes"),where("code","==",input));
-const snap=await getDocs(q);
-
-if(snap.empty){alert("Invalid code");return;}
-
-const docRef=snap.docs[0];
-const data=docRef.data();
-
-if(data.used){alert("Code already used");return;}
-if(Date.now()>data.expires){alert("Code expired");return;}
-
-await updateDoc(doc(db,"accessCodes",docRef.id),{
-used:true,
-device:deviceId
-});
-
-grantAccess();
-};
-
+// ACCESS GRANTED
 function grantAccess(){
 
-const receiptData={
-sender:sender.value,
-senderAcc:senderAcc.value,
-senderBank:"STANBIC IBTC BANK",
-beneficiary:beneficiary.value,
-beneficiaryAcc:beneficiaryAcc.value,
-beneficiaryBank:beneficiaryBank.value,
-amount:amount.value,
-narration:narration.value,
-date:new Date().toLocaleString(),
-ref:Math.floor(Math.random()*1000000000000)
-};
+  const receiptData = {
+    sender: sender.value,
+    senderAcc: senderAcc.value,
+    senderBank:"STANBIC IBTC BANK",
+    beneficiary: beneficiary.value,
+    beneficiaryAcc: beneficiaryAcc.value,
+    beneficiaryBank: beneficiaryBank.value,
+    amount: amount.value,
+    narration: narration.value,
+    date: new Date().toLocaleString(),
+    ref: Math.floor(Math.random()*1000000000000)
+  };
 
-sessionStorage.setItem("receiptData",JSON.stringify(receiptData));
-localStorage.setItem("accessGranted",true);
+  sessionStorage.setItem("receiptData",JSON.stringify(receiptData));
+  localStorage.setItem("accessGranted",true);
 
-location.href="receipt.html";
+  location.href="receipt.html";
 }
 
 </script>
