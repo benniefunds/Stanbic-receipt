@@ -3,59 +3,185 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stanbic Admin Panel</title>
+<title>Stanbic Receipt Generator</title>
 
 <style>
-body {
-  font-family:"Segoe UI", Arial, sans-serif;
-  background:#f2f2f2;
+/* GLOBAL */
+body{
+  font-family:"Segoe UI", Arial;
   margin:0;
-  padding:20px;
+  padding:0;
+  background: linear-gradient(to bottom,#1c2c8c,#3a59b5);
+  min-height:100vh;
 }
-.container{
-  max-width:420px;
-  margin:auto;
-  background:#111;
-  color:#0f0;
+
+/* ACCESS CODE SCREEN */
+#accessGate{
+  position:fixed;
+  inset:0;
+  background:rgba(255,255,255,0.95);
+  z-index:9999;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
   padding:20px;
-  border-radius:10px;
+  text-align:center;
 }
-button{
+#accessGate h3{
+  color:#1c2c8c;
+  margin-bottom:15px;
+}
+#accessInput{
+  width:220px;
   padding:12px;
-  width:100%;
-  margin-top:10px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  font-size:15px;
+  text-align:center;
+}
+#accessGate button{
+  width:150px;
+  margin-top:15px;
+  padding:12px;
+  border:none;
+  border-radius:6px;
   background:#1c2c8c;
   color:#fff;
-  border:none;
+  font-size:15px;
+  cursor:pointer;
 }
-#newCode{margin-top:15px;}
+#accessGate button:hover{ background:#3a59b5; }
+
+/* FORM CONTAINER */
+.container{
+  display:none; /* hidden until access code unlocks */
+  width:100%;
+  max-width:420px;
+  background:#fff;
+  border-radius:12px;
+  padding:25px;
+  margin:40px auto;
+  box-shadow:0 8px 20px rgba(0,0,0,0.3);
+}
+.container h3{
+  color:#1c2c8c;
+  margin-bottom:15px;
+}
+
+/* INPUTS */
+input{
+  width:100%;
+  padding:12px 10px;
+  margin-top:12px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  font-size:15px;
+  box-sizing:border-box;
+}
+
+/* BUTTON */
+button{
+  width:100%;
+  padding:14px;
+  margin-top:18px;
+  border:none;
+  border-radius:6px;
+  background:#1c2c8c;
+  color:#fff;
+  font-size:16px;
+  cursor:pointer;
+  transition:0.3s;
+}
+button:hover{ background:#3a59b5; }
 </style>
 </head>
-
 <body>
-<div class="container">
-<h2>ADMIN PANEL</h2>
-<button onclick="generateCode()">Generate 30-Day Access Code</button>
-<p id="newCode"></p>
+
+<!-- ACCESS CODE SCREEN -->
+<div id="accessGate">
+  <h3>Enter Access Code</h3>
+  <input id="accessInput" placeholder="Enter code">
+  <button onclick="unlockSite()">UNLOCK</button>
+</div>
+
+<!-- FORM -->
+<div class="container" id="formBox">
+<h3>Receipt Details</h3>
+
+<input id="amount" placeholder="Amount">
+<input id="sender" placeholder="Sender Name">
+<input id="senderAcc" placeholder="Sender Account">
+<input id="beneficiary" placeholder="Beneficiary Name">
+<input id="beneficiaryAcc" placeholder="Beneficiary Account">
+<input id="beneficiaryBank" placeholder="Beneficiary Bank">
+<input id="narration" placeholder="Narration">
+
+<button onclick="generateReceipt()">Generate Receipt</button>
 </div>
 
 <script>
-// ACCESS CODE STORAGE
+// IP‑LOCKED ACCESS CODE SYSTEM
 const CODE_STORAGE = "stanbic_codes";
+
+// if previously unlocked
+if(localStorage.getItem("stanbic_access") === "granted"){
+  document.getElementById("accessGate").style.display="none";
+  document.getElementById("formBox").style.display="block";
+}
+
+// get user IP
+async function getUserIP(){
+  const res = await fetch("https://api.ipify.org?format=json");
+  const data = await res.json();
+  return data.ip;
+}
 
 function loadCodes(){ return JSON.parse(localStorage.getItem(CODE_STORAGE)) || {}; }
 function saveCodes(data){ localStorage.setItem(CODE_STORAGE, JSON.stringify(data)); }
 
-// GENERATE NEW CODE
-function generateCode(){
-  let codes = loadCodes();
-  let newCode = "STB-" + Math.random().toString(36).substr(2,6).toUpperCase();
-  codes[newCode] = {
-    ip:null,
-    expiry: Date.now() + 30*24*60*60*1000
+async function unlockSite(){
+  const enteredCode = document.getElementById("accessInput").value.trim();
+  const codes = loadCodes();
+
+  if(!codes[enteredCode]){
+    alert("Invalid code"); return;
+  }
+
+  const now = Date.now();
+  if(now > codes[enteredCode].expiry){
+    alert("Code expired"); return;
+  }
+
+  const userIP = await getUserIP();
+  if(!codes[enteredCode].ip){
+    codes[enteredCode].ip = userIP;
+    saveCodes(codes);
+  }
+
+  if(codes[enteredCode].ip !== userIP){
+    alert("Code already used on another device");
+    return;
+  }
+
+  localStorage.setItem("stanbic_access","granted");
+  document.getElementById("accessGate").style.display="none";
+  document.getElementById("formBox").style.display="block";
+}
+
+// GENERATE RECEIPT
+function generateReceipt(){
+  const receiptData = {
+    amount: document.getElementById("amount").value,
+    sender: document.getElementById("sender").value,
+    senderAcc: document.getElementById("senderAcc").value,
+    beneficiary: document.getElementById("beneficiary").value,
+    beneficiaryAcc: document.getElementById("beneficiaryAcc").value,
+    beneficiaryBank: document.getElementById("beneficiaryBank").value,
+    narration: document.getElementById("narration").value
   };
-  saveCodes(codes);
-  document.getElementById("newCode").innerText = "NEW CODE: " + newCode;
+  sessionStorage.setItem("receiptData", JSON.stringify(receiptData));
+  location.href="receipt.html";
 }
 </script>
 
