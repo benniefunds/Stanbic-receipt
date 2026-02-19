@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF‑8">
-<meta name="viewport" content="width=device‑width, initial‑scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stanbic Receipt Form</title>
+
 <style>
 body{
   font-family:"Segoe UI", Arial;
@@ -40,6 +41,7 @@ button{
 }
 </style>
 </head>
+
 <body>
 <div class="form-wrapper">
 
@@ -58,41 +60,36 @@ button{
     <input id="beneficiary" placeholder="Beneficiary Name">
     <input id="beneficiaryAcc" placeholder="Beneficiary Account">
     <input id="beneficiaryBank" placeholder="Beneficiary Bank">
-
     <input id="sender" placeholder="Sender Name">
     <input id="senderAcc" placeholder="Sender Account">
-
     <input id="narration" placeholder="Narration">
-
     <button onclick="generateReceipt()">Generate Receipt</button>
   </div>
 
 </div>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase‑app‑compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase‑database‑compat.js"></script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <script>
-// Your Firebase config (as you provided)
+// Your Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCx5HepbLsipbGxJZe6IPp3fIzCEcYKwW0",
-  authDomain: "stanbic‑receipt.firebaseapp.com",
-  databaseURL: "https://stanbic‑receipt‑default‑rtdb.firebaseio.com",
-  projectId: "stanbic‑receipt",
-  storageBucket: "stanbic‑receipt.appspot.com",
+  authDomain: "stanbic-receipt.firebaseapp.com",
+  databaseURL: "https://stanbic-receipt-default-rtdb.firebaseio.com",
+  projectId: "stanbic-receipt",
+  storageBucket: "stanbic-receipt.appspot.com",
   messagingSenderId: "706087780174",
   appId: "1:706087780174:web:0af087f8c042e5b1b8a81f",
-  measurementId: "G‑ZXEKCY9PHG"
+  measurementId: "G-ZXEKCY9PHG"
 };
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-</script>
 
-<script>
-// Verify Access Code
+// Verify access code from Firebase
 async function verifyCode(){
   const code = document.getElementById("accessCode").value.trim();
   const errorMsg = document.getElementById("errorMsg");
@@ -102,29 +99,35 @@ async function verifyCode(){
     return;
   }
 
-  const snapshot = await db.ref("codes/"+code).get();
-  if(!snapshot.exists()){
-    errorMsg.innerText = "Invalid code!";
-    return;
+  try {
+    const snapshot = await db.ref("codes/"+code).get();
+    if(!snapshot.exists()){
+      errorMsg.innerText = "Invalid code!";
+      return;
+    }
+
+    const data = snapshot.val();
+    const now = Date.now();
+
+    if(data.expiry && now > data.expiry){
+      errorMsg.innerText = "Code expired!";
+      return;
+    }
+
+    // Access granted
+    localStorage.setItem("accessGranted", "true");
+    document.getElementById("accessSection").style.display="none";
+    document.getElementById("formSection").style.display="block";
+
+  } catch(err) {
+    console.error(err);
+    errorMsg.innerText = "Error verifying code!";
   }
-
-  const data = snapshot.val();
-  const now = Date.now();
-
-  if(data.expiry && now > data.expiry){
-    errorMsg.innerText = "Code expired!";
-    return;
-  }
-
-  // Access granted
-  localStorage.setItem("accessGranted", "true");
-  document.getElementById("accessSection").style.display="none";
-  document.getElementById("formSection").style.display="block";
 }
 
-// Save form and redirect
+// Save form data and redirect to receipt
 function generateReceipt(){
-  const formData = {
+  const data = {
     amount: document.getElementById("amount").value,
     beneficiary: document.getElementById("beneficiary").value,
     beneficiaryAcc: document.getElementById("beneficiaryAcc").value,
@@ -135,10 +138,9 @@ function generateReceipt(){
     narration: document.getElementById("narration").value
   };
 
-  sessionStorage.setItem("receiptData", JSON.stringify(formData));
+  sessionStorage.setItem("receiptData", JSON.stringify(data));
   window.location.href = "receipt.html";
 }
 </script>
-
 </body>
 </html>
