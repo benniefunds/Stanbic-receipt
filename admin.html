@@ -3,147 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stanbic Receipt Generator</title>
+<title>Stanbic Admin PRO MAX - Live</title>
 <style>
-body{
-  font-family:"Segoe UI", Arial;
-  background:#f2f2f2;
-  margin:0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  min-height:100vh;
-}
-.wrapper{
-  max-width:420px;
-  width:90%;
-  background:white;
-  padding:20px;
-  border-radius:12px;
-  box-sizing:border-box;
-}
-h2{text-align:center;margin-bottom:15px;font-size:18px;}
-input,button{
-  width:100%;
-  padding:12px;
-  margin-top:8px;
-  border-radius:6px;
-  border:1px solid #ccc;
-  font-size:14px;
-  box-sizing:border-box;
-}
-button{
-  background:#1c2c8c;
-  color:white;
-  border:none;
-  cursor:pointer;
-}
-#codeModal{
-  display:none;
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.6);
-  justify-content:center;
-  align-items:center;
-  z-index:9999;
-}
-.modalContent{
-  background:white;
-  padding:20px;
-  width:90%;
-  max-width:300px;
-  border-radius:10px;
-  text-align:center;
-}
+body{ font-family:'Segoe UI', Arial; background:#f0f2f5; margin:0; }
+.container{ max-width:900px; margin:auto; padding:20px; }
+.card{ background:white; padding:20px; border-radius:12px; margin-bottom:15px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+h3{margin:0 0 10px 0;font-size:20px;}
+input, select, button{ width:100%; padding:12px; margin-top:8px; border-radius:8px; border:1px solid #ccc; font-size:14px; box-sizing:border-box; }
+button{cursor:pointer;font-weight:600;transition:0.2s} button:hover{opacity:0.9}
+.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+#dashboard{display:none;}
+#stats{font-size:14px;margin-bottom:10px;font-weight:600;}
+.codeCard{ background:#fdfdfd; padding:12px; border-radius:10px; margin-top:10px; box-shadow:0 2px 6px rgba(0,0,0,0.06); font-size:13px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+.codeInfo{flex:1 1 60%;} .codeButtons{flex:1 1 35%; display:flex; gap:5px; justify-content:flex-end; flex-wrap:wrap;}
+.generateBtn{background:linear-gradient(90deg,#1c2c8c,#3a49c5);color:white;border:none;}
+.deleteBtn{background:#ff4d4d;color:white;border:none;}
+.revokeBtn{background:#ff9800;color:white;border:none;}
+.copyBtn{background:#4caf50;color:white;border:none;}
+input:focus, select:focus{outline:none;border-color:#3a49c5;box-shadow:0 0 5px rgba(58,73,197,0.3);}
+#notification{position:fixed;top:20px;right:20px;background:#3a49c5;color:white;padding:15px 20px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.2);opacity:0;transition:0.3s;z-index:9999;}
 </style>
-</head>
-<body>
-
-<div class="wrapper">
-
-<h2>Stanbic IBTC Transaction</h2>
-
-<input id="sender" placeholder="Sender Name">
-<input id="senderAcc" placeholder="Sender Account">
-<input id="beneficiary" placeholder="Beneficiary Name">
-<input id="beneficiaryAcc" placeholder="Beneficiary Account">
-<input id="beneficiaryBank" placeholder="Beneficiary Bank">
-<input id="amount" placeholder="Amount">
-<input id="narration" placeholder="Narration">
-<button onclick="showCodeModal()">Generate Receipt</button>
-
-</div>
-
-<!-- CODE INPUT MODAL -->
-<div id="codeModal">
-  <div class="modalContent">
-    <h3>Enter Access Code</h3>
-    <input id="userCode">
-    <button onclick="verifyCode()">Submit</button>
-  </div>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyBCXfc6oFNUkx1qLWZt5ZqpY2yYzn0OTio",
-  authDomain: "stanbic-pro.firebaseapp.com",
-  projectId: "stanbic-pro",
-  storageBucket: "stanbic-pro.firebasestorage.app",
-  messagingSenderId: "430146762267",
-  appId: "1:430146762267:web:7653262e8cba7c1cc02abe"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// Show modal
-function showCodeModal(){
-  document.getElementById("codeModal").style.display="flex";
-}
-
-// Verify code and generate receipt
-async function verifyCode(){
-  const input = document.getElementById("userCode").value.trim();
-  if(!input){ alert("Enter access code"); return; }
-  try{
-    const q = query(collection(db,"accessCodes"), where("code","==",input));
-    const snap = await getDocs(q);
-    if(snap.empty){ alert("Invalid code"); return; }
-
-    let docData, docId;
-    snap.forEach(d=>{ docData=d.data(); docId=d.id; });
-
-    const now = Date.now();
-    if(docData.used){ alert("Code already used"); return; }
-    if(now > docData.expires){ alert("Code expired"); return; }
-
-    // Mark code as used
-    await updateDoc(doc(db,"accessCodes",docId),{used:true});
-
-    // Save receipt data
-    const receiptData = {
-      sender: sender.value,
-      senderAcc: senderAcc.value,
-      senderBank: "STANBIC IBTC BANK",
-      beneficiary: beneficiary.value,
-      beneficiaryAcc: beneficiaryAcc.value,
-      beneficiaryBank: beneficiaryBank.value,
-      amount: amount.value,
-      narration: narration.value,
-      date: new Date().toLocaleString(),
-      ref: Math.floor(Math.random()*1000000000000)
-    };
-    sessionStorage.setItem("receiptData",JSON.stringify(receiptData));
-    location.href = "receipt.html";
-
-  }catch(e){ alert("Error: "+e.message); console.error(e); }
-}
-</script>
-
-</body>
-</html>
+</head
