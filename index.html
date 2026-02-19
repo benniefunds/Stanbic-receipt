@@ -3,150 +3,80 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stanbic Receipt Generator</title>
+<title>Stanbic Receipt Form</title>
 
 <style>
-body {
-  font-family:"Segoe UI", Arial, sans-serif;
+body{
+  font-family:"Segoe UI", Arial;
   background:#f2f2f2;
-  margin:0;
+  display:flex;
+  justify-content:center;
   padding:20px;
 }
-.container {
+.form-wrapper{
+  width:100%;
   max-width:420px;
-  margin:auto;
   background:#fff;
-  padding:20px;
-  border-radius:10px;
+  padding:15px;
+  box-sizing:border-box;
+  border-radius:6px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
-input, button {
+input, button{
   width:100%;
   padding:12px;
-  margin-top:10px;
+  margin:6px 0;
+  font-size:14px;
+  box-sizing:border-box;
 }
-#adminPanel {
-  display:none;
-  background:#000;
-  color:#0f0;
-  padding:15px;
-  margin-top:20px;
+button{
+  background:#1c2c8c;
+  color:#fff;
+  border:none;
+  cursor:pointer;
 }
 </style>
 </head>
 
 <body>
+<div class="form-wrapper">
+  <h2>Stanbic Receipt Form</h2>
 
-<!-- ACCESS CODE SCREEN -->
-<div id="accessGate" style="position:fixed;inset:0;background:#fff;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:arial;">
-  <h3>Enter Access Code</h3>
-  <input id="accessInput" placeholder="Enter code" style="padding:12px;width:220px">
-  <button onclick="unlockSite()" style="padding:12px;margin-top:10px">UNLOCK</button>
-</div>
+  <input id="amount" placeholder="Amount">
+  <input id="beneficiary" placeholder="Beneficiary Name">
+  <input id="beneficiaryAcc" placeholder="Beneficiary Account">
+  <input id="beneficiaryBank" placeholder="Beneficiary Bank">
 
-<div class="container">
+  <input id="sender" placeholder="Sender Name">
+  <input id="senderAcc" placeholder="Sender Account">
 
-<!-- NORMAL FORM (UNCHANGED) -->
-<div id="formBox" style="display:none;">
-<h3>Receipt Details</h3>
+  <input id="narration" placeholder="Narration">
 
-<input id="amount" placeholder="Amount">
-<input id="sender" placeholder="Sender Name">
-<input id="senderAcc" placeholder="Sender Account">
-<input id="beneficiary" placeholder="Beneficiary Name">
-<input id="beneficiaryAcc" placeholder="Beneficiary Account">
-
-<input id="narration" placeholder="Narration">
-
-<button onclick="generateReceipt()">Generate Receipt</button>
-</div>
-
-<!-- ADMIN PANEL -->
-<div id="adminPanel">
-<h3>ADMIN PANEL</h3>
-<button onclick="generateCode()">Generate New Code</button>
-<p id="newCode"></p>
-</div>
-
+  <button onclick="generateReceipt()">Generate Receipt</button>
 </div>
 
 <script>
-// IP‑LOCKED ACCESS CODE SYSTEM
-const CODE_STORAGE = "stanbic_codes";
-
-// AUTO BYPASS IF ALREADY UNLOCKED
-if(localStorage.getItem("stanbic_access") === "granted"){
-  document.getElementById("accessGate").style.display="none";
-  document.getElementById("formBox").style.display="block";
-}
-
-// GET USER IP
-async function getUserIP(){
-  const res = await fetch("https://api.ipify.org?format=json");
-  const data = await res.json();
-  return data.ip;
-}
-
-// LOAD/SAVE CODES
-function loadCodes(){ return JSON.parse(localStorage.getItem(CODE_STORAGE)) || {}; }
-function saveCodes(data){ localStorage.setItem(CODE_STORAGE, JSON.stringify(data)); }
-
-// UNLOCK SITE
-async function unlockSite(){
-  const enteredCode = document.getElementById("accessInput").value.trim();
-  const codes = loadCodes();
-
-  if(!codes[enteredCode]){
-    alert("Invalid code"); return;
-  }
-
-  const now = Date.now();
-  if(now > codes[enteredCode].expiry){
-    alert("Code expired"); return;
-  }
-
-  const userIP = await getUserIP();
-
-  if(!codes[enteredCode].ip){
-    codes[enteredCode].ip = userIP;
-    saveCodes(codes);
-  }
-
-  if(codes[enteredCode].ip !== userIP){
-    alert("Code already used on another device");
-    return;
-  }
-
-  localStorage.setItem("stanbic_access","granted");
-  document.getElementById("accessGate").style.display="none";
-  document.getElementById("formBox").style.display="block";
-}
-
-// ADMIN CODE GENERATOR
-function generateCode(){
-  let codes = loadCodes();
-  let newCode = "STB-" + Math.random().toString(36).substr(2,6).toUpperCase();
-  codes[newCode] = {
-    ip:null,
-    expiry: Date.now() + 30*24*60*60*1000
+function generateReceipt() {
+  const data = {
+    amount: document.getElementById("amount").value,
+    beneficiary: document.getElementById("beneficiary").value,
+    beneficiaryAcc: document.getElementById("beneficiaryAcc").value,
+    beneficiaryBank: document.getElementById("beneficiaryBank").value,
+    sender: document.getElementById("sender").value,
+    senderAcc: document.getElementById("senderAcc").value,
+    senderBank: "STANBIC IBTC BANK",
+    narration: document.getElementById("narration").value
   };
-  saveCodes(codes);
-  document.getElementById("newCode").innerText = "New Code: "+newCode;
-}
 
-// GENERATE RECEIPT
-function generateReceipt(){
-  const receiptData = {
-    amount:document.getElementById("amount").value,
-    sender:document.getElementById("sender").value,
-    senderAcc:document.getElementById("senderAcc").value,
-    beneficiary:document.getElementById("beneficiary").value,
-    beneficiaryAcc:document.getElementById("beneficiaryAcc").value,
-    narration:document.getElementById("narration").value
-  };
-  sessionStorage.setItem("receiptData", JSON.stringify(receiptData));
-  location.href="receipt.html";
+  // Grant access to receipt page
+  localStorage.setItem("accessGranted", "true");
+
+  // Save data for receipt page
+  sessionStorage.setItem("receiptData", JSON.stringify(data));
+
+  // Redirect to receipt page
+  window.location.href = "receipt.html";
 }
 </script>
-
 </body>
 </html>
