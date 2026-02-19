@@ -10,11 +10,13 @@ body{font-family:'Segoe UI',Arial;background:#f0f2f5;margin:0;}
 .card{background:white;padding:20px;border-radius:12px;margin-bottom:15px;box-shadow:0 4px 12px rgba(0,0,0,0.08);}
 h2,h3{margin:0 0 10px 0;color:#1c2c8c;}
 input,select,button{width:100%;padding:12px;margin-top:8px;border-radius:8px;border:1px solid #ccc;font-size:14px;box-sizing:border-box;}
-button{cursor:pointer;font-weight:600;transition:0.2s} button:hover{opacity:0.9}
+button{cursor:pointer;font-weight:600;transition:0.2s} 
+button:hover{opacity:0.9}
 .topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
 #stats{font-size:14px;margin-bottom:10px;font-weight:600;}
 .codeCard{background:#fdfdfd;padding:12px;border-radius:10px;margin-top:10px;box-shadow:0 2px 6px rgba(0,0,0,0.06);font-size:13px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
-.codeInfo{flex:1 1 60%;} .codeButtons{flex:1 1 35%;display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;}
+.codeInfo{flex:1 1 60%;} 
+.codeButtons{flex:1 1 35%;display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;}
 .generateBtn{background:linear-gradient(90deg,#1c2c8c,#3a49c5);color:white;border:none;}
 .deleteBtn{background:#ff4d4d;color:white;border:none;}
 .revokeBtn{background:#ff9800;color:white;border:none;}
@@ -27,16 +29,16 @@ button{cursor:pointer;font-weight:600;transition:0.2s} button:hover{opacity:0.9}
 <div class="container">
 <div class="card topbar">
 <h2>Admin Dashboard PRO MAX</h2>
-<button onclick="loadCodes()">Refresh</button>
+<button id="refreshBtn">Refresh</button>
 </div>
 
 <div class="card">
-<button class="generateBtn" onclick="generateCode()">Generate New Code</button>
+<button id="generateBtn" class="generateBtn">Generate New Code</button>
 </div>
 
 <div class="card">
-<input id="search" placeholder="Search code..." oninput="loadCodes()">
-<select id="filter" onchange="loadCodes()">
+<input id="search" placeholder="Search code...">
+<select id="filter">
 <option value="all">All</option>
 <option value="active">Active</option>
 <option value="used">Used</option>
@@ -64,32 +66,35 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
 const notifyEl = document.getElementById("notification");
+const generateBtn = document.getElementById("generateBtn");
+const refreshBtn = document.getElementById("refreshBtn");
+const searchInput = document.getElementById("search");
+const filterSelect = document.getElementById("filter");
 
-function notify(msg){ notifyEl.innerText = msg; notifyEl.style.opacity = 1; setTimeout(()=>notifyEl.style.opacity=0,3000); }
+function notify(msg){ notifyEl.innerText = msg; notifyEl.style.opacity=1; setTimeout(()=>notifyEl.style.opacity=0,3000); }
 
-window.generateCode = async () => {
-  try{
-    const newCode = "PRO-"+Math.random().toString(36).substr(2,8).toUpperCase();
-    await addDoc(collection(db,"accessCodes"), {code:newCode,used:false,expires:Date.now()+30*24*60*60*1000,created:serverTimestamp(),device:""});
-    notify(`Code ${newCode} generated`);
-    loadCodes();
-  }catch(e){alert(e.message);}
-};
+async function generateCode(){
+  const newCode = "PRO-"+Math.random().toString(36).substr(2,8).toUpperCase();
+  await addDoc(collection(db,"accessCodes"), {code:newCode, used:false, expires:Date.now()+30*24*60*60*1000, created:serverTimestamp(), device:""});
+  notify(`Code ${newCode} generated`);
+  loadCodes();
+}
 
-window.loadCodes = async () => {
+async function loadCodes(){
   const snap = await getDocs(collection(db,"accessCodes"));
-  let searchVal=document.getElementById("search").value.toLowerCase();
-  let filterVal=document.getElementById("filter").value;
+  let searchVal = searchInput.value.toLowerCase();
+  let filterVal = filterSelect.value;
   let total=0,active=0,used=0,expired=0;
-  let html="";
+  let html = "";
+
   snap.forEach(d=>{
     const data=d.data(); const id=d.id; let now=Date.now();
     let status="active"; if(data.used) status="used"; if(now>data.expires) status="expired";
     total++; if(status=="active") active++; else if(status=="used") used++; else expired++;
     if(filterVal!="all" && filterVal!=status) return;
     if(!data.code.toLowerCase().includes(searchVal)) return;
-
     html+=`<div class="codeCard">
       <div class="codeInfo"><b>${data.code}</b><br>Status:${status}<br>Expires:${new Date(data.expires).toLocaleDateString()}<br>${data.device?`Device:${data.device}`:""}</div>
       <div class="codeButtons">
@@ -99,13 +104,20 @@ window.loadCodes = async () => {
       </div>
     </div>`;
   });
+
   document.getElementById("stats").innerText=`Total:${total} | Active:${active} | Used:${used} | Expired:${expired}`;
   document.getElementById("codes").innerHTML = html;
-};
+}
 
-window.copyCode = code=>{navigator.clipboard.writeText(code);notify(`Code ${code} copied`);};
-window.revoke = async(id,code)=>{await updateDoc(doc(db,"accessCodes",id),{used:false,device:""});loadCodes();notify(`Code ${code} revoked`);};
-window.del = async(id,code)=>{if(confirm("Delete code?")){await deleteDoc(doc(db,"accessCodes",id));loadCodes();notify(`Code ${code} deleted`);}};
+window.copyCode = code => { navigator.clipboard.writeText(code); notify(`Code ${code} copied`); };
+window.revoke = async(id,code)=>{ await updateDoc(doc(db,"accessCodes",id),{used:false,device:""}); loadCodes(); notify(`Code ${code} revoked`); };
+window.del = async(id,code)=>{ if(confirm("Delete code?")){ await deleteDoc(doc(db,"accessCodes",id)); loadCodes(); notify(`Code ${code} deleted`); } };
+
+generateBtn.addEventListener("click", generateCode);
+refreshBtn.addEventListener("click", loadCodes);
+searchInput.addEventListener("input", loadCodes);
+filterSelect.addEventListener("change", loadCodes);
+
 setInterval(loadCodes,5000);
 loadCodes();
 </script>
