@@ -21,7 +21,9 @@ body{
   background:white;
   padding:20px;
   border-radius:12px;
+  box-sizing:border-box;
 }
+h2{text-align:center;margin-bottom:15px;font-size:18px;}
 input,button{
   width:100%;
   padding:12px;
@@ -29,6 +31,7 @@ input,button{
   border-radius:6px;
   border:1px solid #ccc;
   font-size:14px;
+  box-sizing:border-box;
 }
 button{
   background:#1c2c8c;
@@ -39,11 +42,12 @@ button{
 #codeModal{
   display:none;
   position:fixed;
-  top:0;left:0;
-  width:100%;height:100%;
+  top:0; left:0;
+  width:100%; height:100%;
   background:rgba(0,0,0,0.6);
   justify-content:center;
   align-items:center;
+  z-index:9999;
 }
 .modalContent{
   background:white;
@@ -74,9 +78,9 @@ button{
 
 <button onclick="showCodeModal()">Generate Receipt</button>
 
-</div>
+</div> <!-- END wrapper -->
 
-<!-- CODE MODAL -->
+<!-- CODE INPUT MODAL -->
 <div id="codeModal">
   <div class="modalContent">
     <h3>Enter Access Code</h3>
@@ -88,11 +92,9 @@ button{
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore, collection, query, where, getDocs,
-  updateDoc, doc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+// ===== Firebase config =====
 const firebaseConfig = {
   apiKey: "AIzaSyBCXfc6oFNUkx1qLWZt5ZqpY2yYzn0OTio",
   authDomain: "stanbic-pro.firebaseapp.com",
@@ -105,96 +107,68 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 📌 DEVICE ID
-function getDeviceId(){
-  let id = localStorage.getItem("deviceId");
-  if(!id){
-    id = crypto.randomUUID();
-    localStorage.setItem("deviceId", id);
-  }
-  return id;
+// ===== Show modal =====
+function showCodeModal(){
+  document.getElementById("codeModal").style.display="flex";
 }
 
-// SHOW MODAL
-window.showCodeModal = () =>
-  document.getElementById("codeModal").style.display = "flex";
+// ===== Verify Firestore access code =====
+async function verifyCode(){
+  const input = document.getElementById("userCode").value.trim();
+  const now = Date.now();
 
-// VERIFY ACCESS CODE
-window.verifyCode = async function(){
+  if(!input){
+    alert("Please enter access code");
+    return;
+  }
 
-  const input = userCode.value.trim();
-  const deviceId = getDeviceId();
+  try{
+    const q = query(collection(db,"accessCodes"), where("code","==",input));
+    const snap = await getDocs(q);
 
-  // CHECK EXISTING DEVICE ACCESS
-  const activeQuery = query(
-    collection(db,"accessCodes"),
-    where("device","==",deviceId)
-  );
-
-  const activeSnap = await getDocs(activeQuery);
-
-  if(!activeSnap.empty){
-    const data = activeSnap.docs[0].data();
-    if(Date.now() < data.expires){
-      grantAccess();
+    if(snap.empty){
+      alert("Invalid code");
       return;
     }
+
+    let docData, docId;
+    snap.forEach(d => { docData=d.data(); docId=d.id; });
+
+    if(docData.used){
+      alert("Code already used");
+      return;
+    }
+
+    if(now > docData.expires){
+      alert("Code expired");
+      return;
+    }
+
+    // Mark code as used
+    await updateDoc(doc(db,"accessCodes",docId),{used:true});
+
+    // Save form data
+    const receiptData = {
+      sender: sender.value,
+      senderAcc: senderAcc.value,
+      senderBank: "STANBIC IBTC BANK",
+      beneficiary: beneficiary.value,
+      beneficiaryAcc: beneficiaryAcc.value,
+      beneficiaryBank: beneficiaryBank.value,
+      amount: amount.value,
+      narration: narration.value,
+      date: new Date().toLocaleString(),
+      ref: Math.floor(Math.random()*1000000000000)
+    };
+
+    sessionStorage.setItem("receiptData", JSON.stringify(receiptData));
+    localStorage.setItem("accessGranted", true);
+    location.href = "receipt.html";
+
+  } catch(e){
+    console.error(e);
+    alert("Error verifying code: "+e.message);
   }
-
-  // VERIFY CODE
-  const q = query(
-    collection(db,"accessCodes"),
-    where("code","==",input)
-  );
-
-  const snap = await getDocs(q);
-
-  if(snap.empty){
-    alert("Invalid code");
-    return;
-  }
-
-  const docRef = snap.docs[0];
-  const data = docRef.data();
-
-  if(data.used){
-    alert("Code already used");
-    return;
-  }
-
-  if(Date.now() > data.expires){
-    alert("Code expired");
-    return;
-  }
-
-  await updateDoc(doc(db,"accessCodes",docRef.id),{
-    used:true,
-    device:deviceId
-  });
-
-  grantAccess();
-};
-
-// ACCESS GRANTED
-function grantAccess(){
-
-  const receiptData = {
-    sender: sender.value,
-    senderAcc: senderAcc.value,
-    senderBank:"STANBIC IBTC BANK",
-    beneficiary: beneficiary.value,
-    beneficiaryAcc: beneficiaryAcc.value,
-    beneficiaryBank: beneficiaryBank.value,
-    amount: amount.value,
-    narration: narration.value,
-    date: new Date().toLocaleString(),
-    ref: Math.floor(Math.random()*1000000000000)
-  };
-
-  sessionStorage.setItem("receiptData",JSON.stringify(receiptData));
-  localStorage.setItem("accessGranted",true);
-
-  location.href="receipt.html";
 }
 
 </script>
