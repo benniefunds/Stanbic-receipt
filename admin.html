@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stanbic Admin Panel</title>
+
+<style>
+body {
+  font-family:"Segoe UI", Arial, sans-serif;
+  background:#f2f2f2;
+  margin:0;
+  padding:20px;
+}
+.container{
+  max-width:420px;
+  margin:auto;
+  background:#111;
+  color:#0f0;
+  padding:20px;
+  border-radius:10px;
+}
+button{
+  padding:12px;
+  width:100%;
+  margin-top:10px;
+  background:#1c2c8c;
+  color:#fff;
+  border:none;
+}
+#newCode{margin-top:15px;}
+</style>
+</head>
+
+<body>
+<div class="container">
+<h2>ADMIN PANEL</h2>
+<button onclick="generateCode()">Generate 30-Day Access Code</button>
+<p id="newCode"></p>
+</div>
+
+<script>
+// ACCESS CODE STORAGE
+const CODE_STORAGE = "stanbic_codes";
+
+function loadCodes(){ return JSON.parse(localStorage.getItem(CODE_STORAGE)) || {}; }
+function saveCodes(data){ localStorage.setItem(CODE_STORAGE, JSON.stringify(data)); }
+
+// GENERATE NEW CODE
+function generateCode(){
+  let codes = loadCodes();
+  let newCode = "STB-" + Math.random().toString(36).substr(2,6).toUpperCase();
+  codes[newCode] = {
+    ip:null,
+    expiry: Date.now() + 30*24*60*60*1000
+  };
+  saveCodes(codes);
+  document.getElementById("newCode").innerText = "NEW CODE: " + newCode;
+}
+</script>
+
+</body>
+</html>
