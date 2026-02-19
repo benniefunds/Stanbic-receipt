@@ -6,27 +6,27 @@
 <title>Stanbic Receipt Generator</title>
 
 <style>
-body{
+body {
   font-family:"Segoe UI", Arial, sans-serif;
   background:#f2f2f2;
   margin:0;
   padding:20px;
 }
-.container{
+.container {
   max-width:420px;
   margin:auto;
   background:#fff;
   padding:20px;
   border-radius:10px;
 }
-input, button{
+input, button {
   width:100%;
   padding:12px;
   margin-top:10px;
 }
-#adminPanel{
+#adminPanel {
   display:none;
-  background:#111;
+  background:#000;
   color:#0f0;
   padding:15px;
   margin-top:20px;
@@ -72,11 +72,6 @@ input, button{
 <script>
 // IP‑LOCKED ACCESS CODE SYSTEM
 const CODE_STORAGE = "stanbic_codes";
-
-// SHOW ADMIN PANEL IF #admin IN URL
-if(window.location.hash === "#admin"){
-  document.getElementById("adminPanel").style.display = "block";
-}
 
 // AUTO BYPASS IF ALREADY UNLOCKED
 if(localStorage.getItem("stanbic_access") === "granted"){
@@ -131,11 +126,11 @@ function generateCode(){
   let codes = loadCodes();
   let newCode = "STB-" + Math.random().toString(36).substr(2,6).toUpperCase();
   codes[newCode] = {
-    ip: null,
+    ip:null,
     expiry: Date.now() + 30*24*60*60*1000
   };
   saveCodes(codes);
-  document.getElementById("newCode").innerText = "NEW CODE: " + newCode;
+  document.getElementById("newCode").innerText = "New Code: "+newCode;
 }
 
 // GENERATE RECEIPT
