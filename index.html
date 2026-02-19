@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF‑8">
+<meta name="viewport" content="width=device‑width, initial‑scale=1.0">
 <title>Stanbic Receipt Form</title>
-
 <style>
 body{
   font-family:"Segoe UI", Arial;
@@ -27,7 +26,6 @@ input, button{
   padding:12px;
   margin:6px 0;
   font-size:14px;
-  box-sizing:border-box;
 }
 button{
   background:#1c2c8c;
@@ -35,29 +33,98 @@ button{
   border:none;
   cursor:pointer;
 }
+.error{
+  color:red;
+  font-size:13px;
+  margin-bottom:8px;
+}
 </style>
 </head>
-
 <body>
 <div class="form-wrapper">
-  <h2>Stanbic Receipt Form</h2>
 
-  <input id="amount" placeholder="Amount">
-  <input id="beneficiary" placeholder="Beneficiary Name">
-  <input id="beneficiaryAcc" placeholder="Beneficiary Account">
-  <input id="beneficiaryBank" placeholder="Beneficiary Bank">
+  <!-- Access Code -->
+  <div id="accessSection">
+    <h2>Enter Access Code</h2>
+    <div class="error" id="errorMsg"></div>
+    <input id="accessCode" placeholder="Access Code">
+    <button onclick="verifyCode()">Submit Code</button>
+  </div>
 
-  <input id="sender" placeholder="Sender Name">
-  <input id="senderAcc" placeholder="Sender Account">
+  <!-- Form (hidden until code verified) -->
+  <div id="formSection" style="display:none;">
+    <h2>Stanbic Receipt Form</h2>
+    <input id="amount" placeholder="Amount">
+    <input id="beneficiary" placeholder="Beneficiary Name">
+    <input id="beneficiaryAcc" placeholder="Beneficiary Account">
+    <input id="beneficiaryBank" placeholder="Beneficiary Bank">
 
-  <input id="narration" placeholder="Narration">
+    <input id="sender" placeholder="Sender Name">
+    <input id="senderAcc" placeholder="Sender Account">
 
-  <button onclick="generateReceipt()">Generate Receipt</button>
+    <input id="narration" placeholder="Narration">
+
+    <button onclick="generateReceipt()">Generate Receipt</button>
+  </div>
+
 </div>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase‑app‑compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase‑database‑compat.js"></script>
+
 <script>
-function generateReceipt() {
-  const data = {
+// Your Firebase config (as you provided)
+const firebaseConfig = {
+  apiKey: "AIzaSyCx5HepbLsipbGxJZe6IPp3fIzCEcYKwW0",
+  authDomain: "stanbic‑receipt.firebaseapp.com",
+  databaseURL: "https://stanbic‑receipt‑default‑rtdb.firebaseio.com",
+  projectId: "stanbic‑receipt",
+  storageBucket: "stanbic‑receipt.appspot.com",
+  messagingSenderId: "706087780174",
+  appId: "1:706087780174:web:0af087f8c042e5b1b8a81f",
+  measurementId: "G‑ZXEKCY9PHG"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+</script>
+
+<script>
+// Verify Access Code
+async function verifyCode(){
+  const code = document.getElementById("accessCode").value.trim();
+  const errorMsg = document.getElementById("errorMsg");
+
+  if(!code){
+    errorMsg.innerText = "Enter access code!";
+    return;
+  }
+
+  const snapshot = await db.ref("codes/"+code).get();
+  if(!snapshot.exists()){
+    errorMsg.innerText = "Invalid code!";
+    return;
+  }
+
+  const data = snapshot.val();
+  const now = Date.now();
+
+  if(data.expiry && now > data.expiry){
+    errorMsg.innerText = "Code expired!";
+    return;
+  }
+
+  // Access granted
+  localStorage.setItem("accessGranted", "true");
+  document.getElementById("accessSection").style.display="none";
+  document.getElementById("formSection").style.display="block";
+}
+
+// Save form and redirect
+function generateReceipt(){
+  const formData = {
     amount: document.getElementById("amount").value,
     beneficiary: document.getElementById("beneficiary").value,
     beneficiaryAcc: document.getElementById("beneficiaryAcc").value,
@@ -68,15 +135,10 @@ function generateReceipt() {
     narration: document.getElementById("narration").value
   };
 
-  // Grant access to receipt page
-  localStorage.setItem("accessGranted", "true");
-
-  // Save data for receipt page
-  sessionStorage.setItem("receiptData", JSON.stringify(data));
-
-  // Redirect to receipt page
+  sessionStorage.setItem("receiptData", JSON.stringify(formData));
   window.location.href = "receipt.html";
 }
 </script>
+
 </body>
 </html>
