@@ -3,24 +3,111 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stanbic Admin PRO MAX - Live</title>
+<title>Stanbic Admin PRO MAX</title>
 <style>
-body{ font-family:'Segoe UI', Arial; background:#f0f2f5; margin:0; }
-.container{ max-width:900px; margin:auto; padding:20px; }
-.card{ background:white; padding:20px; border-radius:12px; margin-bottom:15px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
-h3{margin:0 0 10px 0;font-size:20px;}
-input, select, button{ width:100%; padding:12px; margin-top:8px; border-radius:8px; border:1px solid #ccc; font-size:14px; box-sizing:border-box; }
+body{font-family:'Segoe UI',Arial;background:#f0f2f5;margin:0;}
+.container{max-width:1000px;margin:auto;padding:20px;}
+.card{background:white;padding:20px;border-radius:12px;margin-bottom:15px;box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+h2,h3{margin:0 0 10px 0;color:#1c2c8c;}
+input,select,button{width:100%;padding:12px;margin-top:8px;border-radius:8px;border:1px solid #ccc;font-size:14px;box-sizing:border-box;}
 button{cursor:pointer;font-weight:600;transition:0.2s} button:hover{opacity:0.9}
 .topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
-#dashboard{display:none;}
 #stats{font-size:14px;margin-bottom:10px;font-weight:600;}
-.codeCard{ background:#fdfdfd; padding:12px; border-radius:10px; margin-top:10px; box-shadow:0 2px 6px rgba(0,0,0,0.06); font-size:13px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
-.codeInfo{flex:1 1 60%;} .codeButtons{flex:1 1 35%; display:flex; gap:5px; justify-content:flex-end; flex-wrap:wrap;}
+.codeCard{background:#fdfdfd;padding:12px;border-radius:10px;margin-top:10px;box-shadow:0 2px 6px rgba(0,0,0,0.06);font-size:13px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.codeInfo{flex:1 1 60%;} .codeButtons{flex:1 1 35%;display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;}
 .generateBtn{background:linear-gradient(90deg,#1c2c8c,#3a49c5);color:white;border:none;}
 .deleteBtn{background:#ff4d4d;color:white;border:none;}
 .revokeBtn{background:#ff9800;color:white;border:none;}
 .copyBtn{background:#4caf50;color:white;border:none;}
-input:focus, select:focus{outline:none;border-color:#3a49c5;box-shadow:0 0 5px rgba(58,73,197,0.3);}
 #notification{position:fixed;top:20px;right:20px;background:#3a49c5;color:white;padding:15px 20px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.2);opacity:0;transition:0.3s;z-index:9999;}
 </style>
-</head
+</head>
+<body>
+
+<div class="container">
+<div class="card topbar">
+<h2>Admin Dashboard PRO MAX</h2>
+<button onclick="loadCodes()">Refresh</button>
+</div>
+
+<div class="card">
+<button class="generateBtn" onclick="generateCode()">Generate New Code</button>
+</div>
+
+<div class="card">
+<input id="search" placeholder="Search code..." oninput="loadCodes()">
+<select id="filter" onchange="loadCodes()">
+<option value="all">All</option>
+<option value="active">Active</option>
+<option value="used">Used</option>
+<option value="expired">Expired</option>
+</select>
+<div id="stats"></div>
+<div id="codes"></div>
+</div>
+</div>
+
+<div id="notification"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBCXfc6oFNUkx1qLWZt5ZqpY2yYzn0OTio",
+  authDomain: "stanbic-pro.firebaseapp.com",
+  projectId: "stanbic-pro",
+  storageBucket: "stanbic-pro.firebasestorage.app",
+  messagingSenderId: "430146762267",
+  appId: "1:430146762267:web:7653262e8cba7c1cc02abe"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const notifyEl = document.getElementById("notification");
+
+function notify(msg){ notifyEl.innerText = msg; notifyEl.style.opacity = 1; setTimeout(()=>notifyEl.style.opacity=0,3000); }
+
+window.generateCode = async () => {
+  try{
+    const newCode = "PRO-"+Math.random().toString(36).substr(2,8).toUpperCase();
+    await addDoc(collection(db,"accessCodes"), {code:newCode,used:false,expires:Date.now()+30*24*60*60*1000,created:serverTimestamp(),device:""});
+    notify(`Code ${newCode} generated`);
+    loadCodes();
+  }catch(e){alert(e.message);}
+};
+
+window.loadCodes = async () => {
+  const snap = await getDocs(collection(db,"accessCodes"));
+  let searchVal=document.getElementById("search").value.toLowerCase();
+  let filterVal=document.getElementById("filter").value;
+  let total=0,active=0,used=0,expired=0;
+  let html="";
+  snap.forEach(d=>{
+    const data=d.data(); const id=d.id; let now=Date.now();
+    let status="active"; if(data.used) status="used"; if(now>data.expires) status="expired";
+    total++; if(status=="active") active++; else if(status=="used") used++; else expired++;
+    if(filterVal!="all" && filterVal!=status) return;
+    if(!data.code.toLowerCase().includes(searchVal)) return;
+
+    html+=`<div class="codeCard">
+      <div class="codeInfo"><b>${data.code}</b><br>Status:${status}<br>Expires:${new Date(data.expires).toLocaleDateString()}<br>${data.device?`Device:${data.device}`:""}</div>
+      <div class="codeButtons">
+        <button class="copyBtn" onclick="copyCode('${data.code}')">Copy</button>
+        <button class="revokeBtn" onclick="revoke('${id}','${data.code}')">Revoke</button>
+        <button class="deleteBtn" onclick="del('${id}','${data.code}')">Delete</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById("stats").innerText=`Total:${total} | Active:${active} | Used:${used} | Expired:${expired}`;
+  document.getElementById("codes").innerHTML = html;
+};
+
+window.copyCode = code=>{navigator.clipboard.writeText(code);notify(`Code ${code} copied`);};
+window.revoke = async(id,code)=>{await updateDoc(doc(db,"accessCodes",id),{used:false,device:""});loadCodes();notify(`Code ${code} revoked`);};
+window.del = async(id,code)=>{if(confirm("Delete code?")){await deleteDoc(doc(db,"accessCodes",id));loadCodes();notify(`Code ${code} deleted`);}};
+setInterval(loadCodes,5000);
+loadCodes();
+</script>
+</body>
+</html>
